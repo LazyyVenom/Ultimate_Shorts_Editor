@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import (QApplication, QWidget, QLabel, QLineEdit, QPushButton, 
-                             QVBoxLayout, QHBoxLayout, QFrame, QScrollArea, QFileDialog)
+                             QVBoxLayout, QHBoxLayout, QFrame, QScrollArea, QFileDialog, QStackedWidget)
 from PyQt5.QtCore import Qt
 import sys
 
@@ -8,7 +8,7 @@ class UI(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Ultimate Shorts Editor")
-        self.setGeometry(100, 100, 650, 550)
+        self.setGeometry(100, 100, 700, 600)
         self.setStyleSheet(self.get_stylesheet())
         self.initUI()
 
@@ -217,7 +217,25 @@ class UI(QWidget):
         """
 
     def initUI(self):
-        # Create main scroll area
+        # Create stacked widget for page navigation
+        self.stacked_widget = QStackedWidget()
+        
+        # Create pages
+        self.page1 = self.create_input_page()
+        self.page2 = self.create_preview_page()
+        
+        # Add pages to stack
+        self.stacked_widget.addWidget(self.page1)
+        self.stacked_widget.addWidget(self.page2)
+        
+        # Main layout
+        main_layout = QVBoxLayout()
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.addWidget(self.stacked_widget)
+        self.setLayout(main_layout)
+
+    def create_input_page(self):
+        # Create main scroll area for page 1
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
@@ -226,23 +244,36 @@ class UI(QWidget):
         # Main widget inside scroll area
         scroll_widget = QWidget()
         main_layout = QVBoxLayout(scroll_widget)
-        main_layout.setSpacing(6)
-        main_layout.setContentsMargins(12, 12, 12, 12)
+        main_layout.setSpacing(12)
+        main_layout.setContentsMargins(20, 20, 20, 20)
+        
+        # Page title
+        title = QLabel("Media Input")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title.setStyleSheet("""
+            font-size: 20px;
+            font-weight: 700;
+            color: #ffffff;
+            margin: 20px 0;
+            background: none;
+            border: none;
+        """)
+        main_layout.addWidget(title)
         
         # Video inputs section
         video_frame = QFrame()
         video_layout = QVBoxLayout(video_frame)
-        video_layout.setSpacing(4)
+        video_layout.setSpacing(8)
         
         video_title = QLabel("Video Files")
-        video_title.setStyleSheet("font-size: 14px; font-weight: 600; color: #ffffff; margin-bottom: 4px;")
+        video_title.setStyleSheet("font-size: 16px; font-weight: 600; color: #ffffff; margin-bottom: 8px;")
         video_layout.addWidget(video_title)
         
         # Video 1
         video1_layout = QHBoxLayout()
-        video1_layout.setSpacing(6)
+        video1_layout.setSpacing(8)
         self.label_video1 = QLabel("Primary:")
-        self.label_video1.setFixedWidth(60)
+        self.label_video1.setFixedWidth(80)
         video1_layout.addWidget(self.label_video1)
         self.input_video1 = QLineEdit()
         self.input_video1.setPlaceholderText("Select main video...")
@@ -255,9 +286,9 @@ class UI(QWidget):
         
         # Video 2
         video2_layout = QHBoxLayout()
-        video2_layout.setSpacing(6)
+        video2_layout.setSpacing(8)
         self.label_video2 = QLabel("Secondary:")
-        self.label_video2.setFixedWidth(60)
+        self.label_video2.setFixedWidth(80)
         video2_layout.addWidget(self.label_video2)
         self.input_video2 = QLineEdit()
         self.input_video2.setPlaceholderText("Select secondary video...")
@@ -273,17 +304,17 @@ class UI(QWidget):
         # Audio input section
         audio_frame = QFrame()
         audio_layout = QVBoxLayout(audio_frame)
-        audio_layout.setSpacing(4)
+        audio_layout.setSpacing(8)
         
         audio_title = QLabel("Audio Files")
-        audio_title.setStyleSheet("font-size: 14px; font-weight: 600; color: #ffffff; margin-bottom: 4px;")
+        audio_title.setStyleSheet("font-size: 16px; font-weight: 600; color: #ffffff; margin-bottom: 8px;")
         audio_layout.addWidget(audio_title)
         
         # Overlay Audio
         overlay_audio_layout = QHBoxLayout()
-        overlay_audio_layout.setSpacing(6)
+        overlay_audio_layout.setSpacing(8)
         self.label_overlay_audio = QLabel("Overlay:")
-        self.label_overlay_audio.setFixedWidth(60)
+        self.label_overlay_audio.setFixedWidth(80)
         overlay_audio_layout.addWidget(self.label_overlay_audio)
         self.input_overlay_audio = QLineEdit()
         self.input_overlay_audio.setPlaceholderText("Select overlay audio...")
@@ -296,9 +327,9 @@ class UI(QWidget):
         
         # Background Audio
         bg_audio_layout = QHBoxLayout()
-        bg_audio_layout.setSpacing(6)
+        bg_audio_layout.setSpacing(8)
         self.label_bg_audio = QLabel("Background:")
-        self.label_bg_audio.setFixedWidth(60)
+        self.label_bg_audio.setFixedWidth(80)
         bg_audio_layout.addWidget(self.label_bg_audio)
         self.input_bg_audio = QLineEdit()
         self.input_bg_audio.setPlaceholderText("Select background audio...")
@@ -311,6 +342,82 @@ class UI(QWidget):
         audio_layout.addLayout(bg_audio_layout)
         
         main_layout.addWidget(audio_frame)
+        
+        # Navigation buttons
+        nav_layout = QHBoxLayout()
+        nav_layout.addStretch()
+        self.next_btn = QPushButton("Next: Preview & Overlays")
+        self.next_btn.setObjectName("submit_btn")
+        self.next_btn.clicked.connect(self.go_to_preview_page)
+        nav_layout.addWidget(self.next_btn)
+        nav_layout.addStretch()
+        main_layout.addLayout(nav_layout)
+        
+        # Set scroll area
+        scroll.setWidget(scroll_widget)
+        return scroll
+
+    def create_preview_page(self):
+        # Create main scroll area for page 2
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        
+        # Main widget inside scroll area
+        scroll_widget = QWidget()
+        main_layout = QVBoxLayout(scroll_widget)
+        main_layout.setSpacing(12)
+        main_layout.setContentsMargins(20, 20, 20, 20)
+        
+        # Page title
+        title = QLabel("Preview & Overlays")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title.setStyleSheet("""
+            font-size: 20px;
+            font-weight: 700;
+            color: #ffffff;
+            margin: 20px 0;
+            background: none;
+            border: none;
+        """)
+        main_layout.addWidget(title)
+        
+        # Preview section
+        preview_frame = QFrame()
+        preview_layout = QVBoxLayout(preview_frame)
+        preview_layout.setSpacing(8)
+        
+        preview_title = QLabel("Video Preview")
+        preview_title.setStyleSheet("font-size: 16px; font-weight: 600; color: #ffffff; margin-bottom: 8px;")
+        preview_layout.addWidget(preview_title)
+        
+        # Preview placeholder
+        self.preview_label = QLabel("Video preview will appear here")
+        self.preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.preview_label.setStyleSheet("""
+            background-color: #2a2a2a;
+            border: 2px dashed #4a4a4a;
+            border-radius: 8px;
+            padding: 40px;
+            color: #8a8a8a;
+            font-size: 14px;
+            min-height: 150px;
+        """)
+        preview_layout.addWidget(self.preview_label)
+        
+        # Video info
+        info_layout = QHBoxLayout()
+        self.video_duration_label = QLabel("Duration: --:--")
+        self.video_duration_label.setStyleSheet("color: #ffffff; font-size: 12px;")
+        info_layout.addWidget(self.video_duration_label)
+        info_layout.addStretch()
+        self.video_resolution_label = QLabel("Resolution: --x--")
+        self.video_resolution_label.setStyleSheet("color: #ffffff; font-size: 12px;")
+        info_layout.addWidget(self.video_resolution_label)
+        preview_layout.addLayout(info_layout)
+        
+        main_layout.addWidget(preview_frame)
         
         # Images section
         images_frame = QFrame()
@@ -374,25 +481,46 @@ class UI(QWidget):
         
         main_layout.addWidget(text_frame)
         
-        # Submit button
-        submit_layout = QHBoxLayout()
-        submit_layout.addStretch()
-        self.submit_button = QPushButton("Generate Video")
-        self.submit_button.setObjectName("submit_btn")
-        submit_layout.addWidget(self.submit_button)
-        submit_layout.addStretch()
-        main_layout.addLayout(submit_layout)
+        # Navigation buttons
+        nav_layout = QHBoxLayout()
+        self.back_btn = QPushButton("← Back to Media")
+        self.back_btn.setObjectName("browse_btn")
+        self.back_btn.clicked.connect(self.go_to_input_page)
+        nav_layout.addWidget(self.back_btn)
+        
+        nav_layout.addStretch()
+        
+        self.finish_btn = QPushButton("Finish & Save Video")
+        self.finish_btn.setObjectName("submit_btn")
+        self.finish_btn.clicked.connect(self.finish_video)
+        nav_layout.addWidget(self.finish_btn)
+        
+        main_layout.addLayout(nav_layout)
         
         # Set scroll area
         scroll.setWidget(scroll_widget)
-        
-        # Main window layout
-        window_layout = QVBoxLayout()
-        window_layout.setContentsMargins(0, 0, 0, 0)
-        window_layout.addWidget(scroll)
-        self.setLayout(window_layout)
-        
-        self.submit_button.clicked.connect(self.on_submit)
+        return scroll
+
+    def go_to_preview_page(self):
+        # Update preview info when switching to page 2
+        self.update_preview_info()
+        self.stacked_widget.setCurrentIndex(1)
+    
+    def go_to_input_page(self):
+        self.stacked_widget.setCurrentIndex(0)
+    
+    def update_preview_info(self):
+        # Update preview label with media info
+        primary_video = self.input_video1.text()
+        if primary_video:
+            self.preview_label.setText(f"Primary: {primary_video.split('/')[-1]}")
+            # You can add actual video duration/resolution detection here
+            self.video_duration_label.setText("Duration: 0:30")  # Placeholder
+            self.video_resolution_label.setText("Resolution: 1920x1080")  # Placeholder
+        else:
+            self.preview_label.setText("No primary video selected")
+            self.video_duration_label.setText("Duration: --:--")
+            self.video_resolution_label.setText("Resolution: --x--")
 
     def browse_file(self, line_edit, file_filter):
         file_path, _ = QFileDialog.getOpenFileName(self, "Select File", "", file_filter)
@@ -411,7 +539,7 @@ class UI(QWidget):
         path_layout.setSpacing(8)
         path_label = QLabel(f"Image {len(self.images) + 1}:")
         path_label.setStyleSheet("font-size: 12px; margin: 0;")
-        path_label.setFixedWidth(60)
+        path_label.setFixedWidth(70)
         path_layout.addWidget(path_label)
         
         image_path_input = QLineEdit()
@@ -430,7 +558,7 @@ class UI(QWidget):
         timestamp_layout.setSpacing(8)
         timestamp_label = QLabel("Time (s):")
         timestamp_label.setStyleSheet("font-size: 12px; margin: 0;")
-        timestamp_label.setFixedWidth(60)
+        timestamp_label.setFixedWidth(70)
         timestamp_layout.addWidget(timestamp_label)
         
         timestamp_input = QLineEdit()
@@ -460,7 +588,7 @@ class UI(QWidget):
         text_layout.setSpacing(8)
         text_label = QLabel(f"Text {len(self.texts) + 1}:")
         text_label.setStyleSheet("font-size: 12px; margin: 0;")
-        text_label.setFixedWidth(60)
+        text_label.setFixedWidth(70)
         text_layout.addWidget(text_label)
         
         text_input = QLineEdit()
@@ -474,7 +602,7 @@ class UI(QWidget):
         timestamp_layout.setSpacing(8)
         timestamp_label = QLabel("Time (s):")
         timestamp_label.setStyleSheet("font-size: 12px; margin: 0;")
-        timestamp_label.setFixedWidth(60)
+        timestamp_label.setFixedWidth(70)
         timestamp_layout.addWidget(timestamp_label)
         
         timestamp_input = QLineEdit()
@@ -492,31 +620,31 @@ class UI(QWidget):
             _, _, text_frame = self.texts.pop()
             text_frame.deleteLater()
 
-    def on_submit(self):
-        print("\n" + "="*50)
-        print("ULTIMATE SHORTS EDITOR - CONFIGURATION")
-        print("="*50)
-        print(f"Primary Video: {self.input_video1.text() or 'Not specified'}")
-        print(f"Secondary Video: {self.input_video2.text() or 'Not specified'}")
-        print(f"Overlay Audio: {self.input_overlay_audio.text() or 'Not specified'}")
-        print(f"Background Audio: {self.input_bg_audio.text() or 'Not specified'}")
-        print(f"Image Overlays: {len(self.images)} images")
+    def finish_video(self):
+        print("\n" + "="*60)
+        print("🎬 ULTIMATE SHORTS EDITOR - FINAL CONFIGURATION")
+        print("="*60)
+        print(f"📹 Primary Video: {self.input_video1.text() or 'Not specified'}")
+        print(f"📹 Secondary Video: {self.input_video2.text() or 'Not specified'}")
+        print(f"🎵 Overlay Audio: {self.input_overlay_audio.text() or 'Not specified'}")
+        print(f"🎵 Background Audio: {self.input_bg_audio.text() or 'Not specified'}")
+        print(f"🖼️ Image Overlays: {len(self.images)} images")
         
         for idx, (img_input, ts_input, _) in enumerate(self.images):
             img_path = img_input.text() or 'Not specified'
             timestamp = ts_input.text() or 'Not specified'
-            print(f"   Image {idx+1}: {img_path} (at {timestamp}s)")
+            print(f"   📷 Image {idx+1}: {img_path.split('/')[-1] if img_path != 'Not specified' else img_path} (at {timestamp}s)")
         
-        print(f"Text Overlays: {len(self.texts)} texts")
+        print(f"📝 Text Overlays: {len(self.texts)} texts")
         
         for idx, (text_input, ts_input, _) in enumerate(self.texts):
             text_content = text_input.text() or 'Not specified'
             timestamp = ts_input.text() or 'Not specified'
-            print(f"   Text {idx+1}: '{text_content}' (at {timestamp}s)")
+            print(f"   💬 Text {idx+1}: '{text_content}' (at {timestamp}s)")
         
-        print("="*50)
-        print("Configuration saved! Ready to generate your short video.")
-        print("="*50 + "\n")
+        print("="*60)
+        print("✅ Video processing started! Your short video will be saved shortly.")
+        print("="*60 + "\n")
 
     def display(self):
         return self.windowTitle()
