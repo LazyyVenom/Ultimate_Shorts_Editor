@@ -946,10 +946,10 @@ class UI(QWidget):
             self,
             "Success",
             f"Video processing completed successfully!\n\nSaved to: {output_path}\n\nWould you like to open the folder?",
-            QMessageBox.Yes | QMessageBox.No
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
         )
         
-        if result == QMessageBox.Yes:
+        if result == QMessageBox.StandardButton.Yes:
             # Open the folder containing the output file
             os.system(f"open '{os.path.dirname(output_path)}'")
     
