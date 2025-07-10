@@ -3,15 +3,11 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 import tempfile
 from typing import Dict, List, Tuple, Union, Optional, Any
-
-# Using direct imports with type ignore comments to bypass IDE resolution issues
-# fmt: off
 import moviepy.editor  # type: ignore
 from moviepy.editor import (  # type: ignore
     AudioFileClip, TextClip, CompositeVideoClip, VideoFileClip,
     vfx, ImageClip, concatenate_videoclips, CompositeAudioClip
 )
-# fmt: on
 
 def add_heading(video: VideoFileClip, heading: str) -> CompositeVideoClip:
     text_clip = TextClip(
