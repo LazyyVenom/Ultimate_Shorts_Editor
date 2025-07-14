@@ -462,71 +462,56 @@ def apply_color_grading(video: VideoFileClip, style: str = "cinematic") -> Video
             def cinematic_filter(frame):
                 frame_float = frame.astype(np.float32) / 255.0
                 
-                contrast = 1.2  # Increase contrast
-                saturation = 1.1  # Slightly increase saturation
+                contrast = 1.2
+                saturation = 1.1
                 
-                # Apply contrast
                 frame_float = (frame_float - 0.5) * contrast + 0.5
                 
-                # Apply color tinting to shadows and highlights
-                # Shadows slightly blue, highlights slightly warm
                 shadows = np.minimum(frame_float, 0.5) / 0.5
                 highlights = np.maximum(frame_float - 0.5, 0) / 0.5
                 
-                # Blue shadows
                 shadows_tinted = shadows.copy()
-                shadows_tinted[:,:,0] *= 0.9  # Reduce red in shadows
-                shadows_tinted[:,:,2] *= 1.1  # Increase blue in shadows
+                shadows_tinted[:,:,0] *= 0.9
+                shadows_tinted[:,:,2] *= 1.1
                 
-                # Warm highlights
                 highlights_tinted = highlights.copy()
-                highlights_tinted[:,:,0] *= 1.1  # Increase red in highlights
-                highlights_tinted[:,:,2] *= 0.9  # Reduce blue in highlights
+                highlights_tinted[:,:,0] *= 1.1
+                highlights_tinted[:,:,2] *= 0.9
                 
-                # Combine shadows and highlights
                 frame_float = shadows_tinted * 0.5 + highlights_tinted * 0.5
                 
-                # Apply saturation
                 luminance = 0.299 * frame_float[:,:,0] + 0.587 * frame_float[:,:,1] + 0.114 * frame_float[:,:,2]
                 luminance = luminance.reshape(frame_float.shape[0], frame_float.shape[1], 1)
                 frame_float = luminance + saturation * (frame_float - luminance)
                 
-                # Convert back to uint8
                 frame_result = np.clip(frame_float * 255.0, 0, 255).astype(np.uint8)
                 return frame_result
                 
             return video.fl_image(cinematic_filter)
             
         elif style == "warm":
-            # Warm look (increase reds and yellows)
             def warm_filter(frame):
                 frame_float = frame.astype(np.float32)
-                # Increase red and green (yellow) channels
-                frame_float[:,:,0] = np.minimum(frame_float[:,:,0] * 1.15, 255)  # Red
-                frame_float[:,:,1] = np.minimum(frame_float[:,:,1] * 1.05, 255)  # Green
-                frame_float[:,:,2] = np.maximum(frame_float[:,:,2] * 0.9, 0)     # Blue
+                frame_float[:,:,0] = np.minimum(frame_float[:,:,0] * 1.15, 255)
+                frame_float[:,:,1] = np.minimum(frame_float[:,:,1] * 1.05, 255)
+                frame_float[:,:,2] = np.maximum(frame_float[:,:,2] * 0.9, 0)
                 return frame_float.astype(np.uint8)
                 
             return video.fl_image(warm_filter)
             
         elif style == "cold":
-            # Cold look (increase blues)
             def cold_filter(frame):
                 frame_float = frame.astype(np.float32)
-                # Increase blue channel, reduce red
-                frame_float[:,:,0] = np.maximum(frame_float[:,:,0] * 0.9, 0)     # Red
-                frame_float[:,:,2] = np.minimum(frame_float[:,:,2] * 1.15, 255)  # Blue
+                frame_float[:,:,0] = np.maximum(frame_float[:,:,0] * 0.9, 0)
+                frame_float[:,:,2] = np.minimum(frame_float[:,:,2] * 1.15, 255)
                 return frame_float.astype(np.uint8)
                 
             return video.fl_image(cold_filter)
             
         elif style == "vintage":
-            # Vintage look (sepia tone with vignette)
             def vintage_filter(frame):
-                # Convert to sepia
                 frame_float = frame.astype(np.float32)
                 
-                # Create sepia tone
                 r = frame_float[:,:,0] * 0.393 + frame_float[:,:,1] * 0.769 + frame_float[:,:,2] * 0.189
                 g = frame_float[:,:,0] * 0.349 + frame_float[:,:,1] * 0.686 + frame_float[:,:,2] * 0.168
                 b = frame_float[:,:,0] * 0.272 + frame_float[:,:,1] * 0.534 + frame_float[:,:,2] * 0.131
@@ -535,16 +520,13 @@ def apply_color_grading(video: VideoFileClip, style: str = "cinematic") -> Video
                 frame_float[:,:,1] = np.minimum(g, 255)
                 frame_float[:,:,2] = np.minimum(b, 255)
                 
-                # Add vignette effect (darker corners)
                 rows, cols = frame.shape[:2]
                 center_x, center_y = cols / 2, rows / 2
                 
-                # Create radial gradient mask
                 y, x = np.ogrid[:rows, :cols]
                 mask = ((x - center_x)**2 + (y - center_y)**2) / (max(center_x, center_y)**2)
                 mask = np.minimum(mask * 1.5, 1.0)
                 
-                # Apply vignette
                 for c in range(3):
                     frame_float[:,:,c] = frame_float[:,:,c] * (1.0 - mask * 0.6)
                 
@@ -553,7 +535,6 @@ def apply_color_grading(video: VideoFileClip, style: str = "cinematic") -> Video
             return video.fl_image(vintage_filter)
             
         else:
-            # Return original if style not recognized
             return video
             
     except Exception as e:
