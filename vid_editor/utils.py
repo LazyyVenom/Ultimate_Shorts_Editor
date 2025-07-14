@@ -38,14 +38,11 @@ def add_image_overlay(video: VideoFileClip, image_path: str, start_time: float, 
         return video
     
     try:
-        # Load the image
         img_clip = ImageClip(image_path)
         
-        # Scale the image to fit within the video frame (maintain aspect ratio)
         video_width, video_height = video.size
         img_width, img_height = img_clip.size
         
-        # Calculate scale factor to fit within 75% of the video dimensions
         width_scale = (video_width * 0.75) / img_width
         height_scale = (video_height * 0.75) / img_height
         scale_factor = min(width_scale, height_scale)
@@ -55,10 +52,8 @@ def add_image_overlay(video: VideoFileClip, image_path: str, start_time: float, 
         
         img_clip = img_clip.resize((new_width, new_height))
         
-        # Center the image on the screen
         img_clip = img_clip.set_position(('center', 'center'))
         
-        # Set the duration and start time
         img_duration = min(duration, video.duration - start_time)
         if img_duration <= 0:
             print(f"Image at {start_time}s would appear after video ends.")
@@ -66,11 +61,9 @@ def add_image_overlay(video: VideoFileClip, image_path: str, start_time: float, 
         
         img_clip = img_clip.set_start(start_time).set_duration(img_duration)
         
-        # Add fade in/out effect
         fade_duration = min(0.5, img_duration / 4)
         img_clip = img_clip.fadein(fade_duration).fadeout(fade_duration)
         
-        # Overlay the image on the video
         result = CompositeVideoClip([video, img_clip])
         return result
     
@@ -81,7 +74,6 @@ def add_image_overlay(video: VideoFileClip, image_path: str, start_time: float, 
 def add_text_overlay(video: VideoFileClip, text: str, start_time: float, duration: float = 3.0) -> CompositeVideoClip:
     """Add a text overlay to the video at a specific timestamp"""
     try:
-        # Create a text clip
         font_path = "static/Utendo-Bold.ttf"
         text_clip = TextClip(
             text=text,
@@ -94,7 +86,6 @@ def add_text_overlay(video: VideoFileClip, text: str, start_time: float, duratio
             align='center'
         )
         
-        # Set the duration and start time
         text_duration = min(duration, video.duration - start_time)
         if text_duration <= 0:
             print(f"Text at {start_time}s would appear after video ends.")
@@ -102,11 +93,9 @@ def add_text_overlay(video: VideoFileClip, text: str, start_time: float, duratio
         
         text_clip = text_clip.set_position(('center', 'bottom')).set_start(start_time).set_duration(text_duration)
         
-        # Add fade in/out effect
         fade_duration = min(0.5, text_duration / 4)
         text_clip = text_clip.fadein(fade_duration).fadeout(fade_duration)
         
-        # Overlay the text on the video
         result = CompositeVideoClip([video, text_clip])
         return result
     
@@ -123,9 +112,7 @@ def combine_videos(primary_video_path: str, secondary_video_path: str | None = N
     
     if secondary_video_path and os.path.exists(secondary_video_path):
         secondary_clip = VideoFileClip(secondary_video_path)
-        # Resize secondary clip to match primary dimensions
         secondary_clip = secondary_clip.resize(primary_clip.size)
-        # Combine the clips (concatenate)
         return concatenate_videoclips([primary_clip, secondary_clip])
     
     return primary_clip
@@ -134,22 +121,18 @@ def add_audio(video: VideoFileClip, overlay_audio_path: str | None = None, backg
     """Add overlay and/or background audio to video"""
     result_video = video
     
-    # Add overlay audio if provided
     if overlay_audio_path and os.path.exists(overlay_audio_path):
         try:
             overlay_audio = AudioFileClip(overlay_audio_path)
-            # Trim or loop the overlay audio to match video duration
             if overlay_audio.duration > video.duration:
                 overlay_audio = overlay_audio.subclip(0, video.duration)
             else:
-                # Loop audio to match video duration
                 repeats = int(np.ceil(video.duration / overlay_audio.duration))
                 overlay_audio = AudioFileClip(overlay_audio_path).volumex(0.7)
                 overlay_audio = concatenate_videoclips([overlay_audio] * repeats).subclip(0, video.duration)
             
-            # Mix overlay audio with existing audio
             if result_video.audio:
-                original_audio = result_video.audio.volumex(0.3)  # Lower original volume
+                original_audio = result_video.audio.volumex(0.3)
                 result_video = result_video.set_audio(
                     CompositeAudioClip([original_audio, overlay_audio])
                 )
@@ -159,22 +142,17 @@ def add_audio(video: VideoFileClip, overlay_audio_path: str | None = None, backg
         except Exception as e:
             print(f"Error adding overlay audio: {e}")
     
-    # Add background audio if provided
     if background_audio_path and os.path.exists(background_audio_path):
         try:
             bg_audio = AudioFileClip(background_audio_path)
-            # Set background audio volume lower than overlay
-            bg_audio = bg_audio.volumex(0.15)  # Low volume for background
-            
-            # Trim or loop the background audio to match video duration
+            bg_audio = bg_audio.volumex(0.15)
+
             if bg_audio.duration > video.duration:
                 bg_audio = bg_audio.subclip(0, video.duration)
             else:
-                # Loop audio to match video duration
                 repeats = int(np.ceil(video.duration / bg_audio.duration))
                 bg_audio = concatenate_videoclips([bg_audio] * repeats).subclip(0, video.duration)
             
-            # Mix background audio with existing audio
             if result_video.audio:
                 result_video = result_video.set_audio(
                     CompositeAudioClip([result_video.audio, bg_audio])
@@ -204,14 +182,11 @@ def generate_thumbnail(video_path: str, output_path: str, text: Optional[str] = 
     video = VideoFileClip(video_path)
     
     try:
-        # Take frame from 1/3 of the video duration
         thumbnail_time = video.duration / 3
         frame = video.get_frame(thumbnail_time)
         
-        # Convert to PIL Image for processing
         img = Image.fromarray(frame)
         
-        # Add text overlay if provided
         if text:
             draw = ImageDraw.Draw(img)
             try:
@@ -220,25 +195,19 @@ def generate_thumbnail(video_path: str, output_path: str, text: Optional[str] = 
                 print("Warning: Could not load custom font, using default")
                 font = ImageFont.load_default()
                 
-            # Calculate text position (centered)
             text_width, text_height = draw.textbbox((0, 0), text, font=font)[2:4]
             position = ((img.width - text_width) // 2, (img.height - text_height) // 2)
+
+            outline_color = (0, 0, 0)
+            text_color = (255, 255, 255)
             
-            # Add text with outline for better visibility
-            outline_color = (0, 0, 0)  # Black outline
-            text_color = (255, 255, 255)  # White text
-            
-            # Draw text outline
             for offset in [(1, 1), (-1, -1), (1, -1), (-1, 1)]:
                 draw.text((position[0] + offset[0], position[1] + offset[1]), text, font=font, fill=outline_color)
                 
-            # Draw main text
             draw.text(position, text, font=font, fill=text_color)
         
-        # Create directory if it doesn't exist
         os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
         
-        # Save the thumbnail
         img.save(output_path, quality=95)
         return output_path
         
@@ -246,7 +215,6 @@ def generate_thumbnail(video_path: str, output_path: str, text: Optional[str] = 
         print(f"Error generating thumbnail: {e}")
         raise
     finally:
-        # Always close the video file to avoid resource leaks
         video.close()
 
 def create_video_preview(video_path: str, output_path: str, duration: float = 5) -> Optional[str]:
@@ -267,17 +235,13 @@ def create_video_preview(video_path: str, output_path: str, duration: float = 5)
     video = None
     preview = None
     try:
-        # Create directory for output if it doesn't exist
         os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
         
-        # Load the video
         video = VideoFileClip(video_path)
         
-        # Create a short clip from the first few seconds
         preview_duration = min(duration, video.duration)
         preview = video.subclip(0, preview_duration)
         
-        # Add a "Preview" label to distinguish it
         try:
             text_clip = TextClip(
                 text="PREVIEW",
@@ -297,17 +261,15 @@ def create_video_preview(video_path: str, output_path: str, duration: float = 5)
                 method='label'
             ).set_position(('right', 'top')).set_duration(preview_duration)
         
-        # Combine the preview and text
         preview = CompositeVideoClip([preview, text_clip])
         
-        # Write the preview file with progress monitor
         preview.write_videofile(
             output_path, 
             codec="h264", 
             audio_codec="aac", 
             bitrate="1500k", 
             fps=30,
-            logger=None  # Suppress verbose output
+            logger=None
         )
         
         return output_path
@@ -316,7 +278,6 @@ def create_video_preview(video_path: str, output_path: str, duration: float = 5)
         print(f"Error creating preview: {e}")
         return None
     finally:
-        # Clean up resources
         if video:
             try:
                 video.close()
@@ -358,7 +319,6 @@ def get_video_info(video_path: str) -> Optional[Dict[str, Any]]:
         print(f"Error getting video info: {e}")
         return None
     finally:
-        # Ensure we close the video to prevent resource leaks
         if video:
             try:
                 video.close()
@@ -378,16 +338,13 @@ def create_video_transition(clip1: VideoFileClip, clip2: VideoFileClip, transiti
     Returns:
         VideoFileClip with the transition effect
     """
-    # Adjust transition duration to be within limits
     max_transition = min(clip1.duration, clip2.duration) / 2
     transition_duration = min(transition_duration, max_transition)
     
     if transition_type == "crossfade":
-        # Create crossfade transition
         clip1 = clip1.crossfadeout(transition_duration)
         clip2 = clip2.crossfadein(transition_duration)
         
-        # Combine with a slight overlap for the transition
         result = concatenate_videoclips([
             clip1.subclip(0, clip1.duration - transition_duration/2),
             clip2.subclip(transition_duration/2)
@@ -395,13 +352,11 @@ def create_video_transition(clip1: VideoFileClip, clip2: VideoFileClip, transiti
         return result
         
     elif transition_type == "fade":
-        # Simple fade transition
         clip1 = clip1.fadeout(transition_duration)
         clip2 = clip2.fadein(transition_duration)
         return concatenate_videoclips([clip1, clip2])
     
     else:
-        # Default to simple concatenation if transition type not recognized
         return concatenate_videoclips([clip1, clip2])
 
 def add_text_with_animation(video: VideoFileClip, text: str, start_time: float, 
@@ -419,7 +374,6 @@ def add_text_with_animation(video: VideoFileClip, text: str, start_time: float,
         CompositeVideoClip with the animated text
     """
     try:
-        # Create a text clip
         font_path = "static/Utendo-Bold.ttf"
         
         try:
@@ -434,7 +388,6 @@ def add_text_with_animation(video: VideoFileClip, text: str, start_time: float,
                 align='center'
             )
         except Exception:
-            # Fall back to default font if custom font fails
             text_clip = TextClip(
                 text=text,
                 font_size=40,
@@ -445,39 +398,30 @@ def add_text_with_animation(video: VideoFileClip, text: str, start_time: float,
                 align='center'
             )
         
-        # Set the duration and start time
         text_duration = min(duration, video.duration - start_time)
         if text_duration <= 0:
             print(f"Text at {start_time}s would appear after video ends.")
             return video
             
-        # Position the text
         text_clip = text_clip.set_position(('center', 'center')).set_start(start_time).set_duration(text_duration)
         
-        # Apply animation based on type
         anim_duration = min(0.7, text_duration / 4)
         
         if animation == "slide":
-            # Slide from bottom
             text_clip = text_clip.with_effects([vfx.SlideIn(anim_duration, 'bottom'), vfx.SlideOut(anim_duration, 'bottom')])
             
         elif animation == "fade":
-            # Fade in/out
             text_clip = text_clip.fadein(anim_duration).fadeout(anim_duration)
             
         elif animation == "zoom":
-            # Zoom effect
             text_clip = text_clip.with_effects([vfx.ZoomIn(anim_duration), vfx.ZoomOut(anim_duration)])
             
         elif animation == "typewriter":
-            # Simple typewriter effect (frame by frame)
             def make_typewriter_frame(t):
-                # Calculate how much text to show based on time
                 progress = min(1.0, t / (text_duration - anim_duration))
                 char_count = max(1, int(len(text) * progress))
                 current_text = text[:char_count]
                 
-                # Create a frame with the current text
                 txt_frame = TextClip(
                     text=current_text,
                     font=font_path if os.path.exists(font_path) else None,
@@ -491,13 +435,11 @@ def add_text_with_animation(video: VideoFileClip, text: str, start_time: float,
                 
                 return txt_frame.img
                 
-            # Create the typewriter effect
             text_clip = VideoFileClip(
                 make_frame=make_typewriter_frame,
                 duration=text_duration
             ).set_start(start_time)
         
-        # Overlay the text on the video
         result = CompositeVideoClip([video, text_clip])
         return result
     
@@ -517,12 +459,9 @@ def apply_color_grading(video: VideoFileClip, style: str = "cinematic") -> Video
     """
     try:
         if style == "cinematic":
-            # Cinematic look (higher contrast, slightly blue shadows, warm highlights)
             def cinematic_filter(frame):
-                # Convert to float for processing
                 frame_float = frame.astype(np.float32) / 255.0
                 
-                # Apply color adjustments
                 contrast = 1.2  # Increase contrast
                 saturation = 1.1  # Slightly increase saturation
                 
