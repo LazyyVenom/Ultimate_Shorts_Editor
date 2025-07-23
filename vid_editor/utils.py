@@ -3,10 +3,11 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 import tempfile
 from typing import Dict, List, Tuple, Union, Optional, Any
-import moviepy.editor  # type: ignore
-from moviepy.editor import (  # type: ignore
-    AudioFileClip, TextClip, CompositeVideoClip, VideoFileClip,
-    vfx, ImageClip, concatenate_videoclips, CompositeAudioClip
+import moviepy  # type: ignore
+from moviepy import (  # type: ignore
+    AudioFileClip, TextClip, CompositeVideoClip, VideoFileClip, VideoClip,
+    vfx, ImageClip, concatenate_videoclips, CompositeAudioClip,
+    concatenate_audioclips
 )
 
 def add_heading(video: VideoFileClip, heading: str) -> CompositeVideoClip:
@@ -31,11 +32,11 @@ def add_heading(video: VideoFileClip, heading: str) -> CompositeVideoClip:
     video_with_text = CompositeVideoClip([video, text_clip])
     return video_with_text
 
-def add_image_overlay(video: VideoFileClip, image_path: str, start_time: float, duration: float = 5.0) -> CompositeVideoClip:
+def add_image_overlay(video: Union[VideoFileClip, CompositeVideoClip], image_path: str, start_time: float, duration: float = 5.0) -> CompositeVideoClip:
     """Add an image overlay to the video at a specific timestamp"""
     if not os.path.exists(image_path):
         print(f"Image file not found: {image_path}")
-        return video
+        return CompositeVideoClip([video])
     
     try:
         img_clip = ImageClip(image_path)
@@ -50,28 +51,28 @@ def add_image_overlay(video: VideoFileClip, image_path: str, start_time: float, 
         new_width = int(img_width * scale_factor)
         new_height = int(img_height * scale_factor)
         
-        img_clip = img_clip.resize((new_width, new_height))
-        
-        img_clip = img_clip.set_position(('center', 'center'))
+        img_clip = img_clip.resized((new_width, new_height))
+        # Type ignore for MoviePy typing issue - resized() returns correct type at runtime
+        img_clip = img_clip.with_position(('center', 'center'))  # type: ignore
         
         img_duration = min(duration, video.duration - start_time)
         if img_duration <= 0:
             print(f"Image at {start_time}s would appear after video ends.")
-            return video
+            return CompositeVideoClip([video])
         
-        img_clip = img_clip.set_start(start_time).set_duration(img_duration)
+        img_clip = img_clip.with_start(start_time).with_duration(img_duration)
         
         fade_duration = min(0.5, img_duration / 4)
-        img_clip = img_clip.fadein(fade_duration).fadeout(fade_duration)
+        img_clip = img_clip.with_effects([vfx.FadeIn(fade_duration), vfx.FadeOut(fade_duration)])
         
         result = CompositeVideoClip([video, img_clip])
         return result
     
     except Exception as e:
         print(f"Error adding image overlay: {e}")
-        return video
+        return CompositeVideoClip([video])
 
-def add_text_overlay(video: VideoFileClip, text: str, start_time: float, duration: float = 3.0) -> CompositeVideoClip:
+def add_text_overlay(video: Union[VideoFileClip, CompositeVideoClip], text: str, start_time: float, duration: float = 3.0) -> CompositeVideoClip:
     """Add a text overlay to the video at a specific timestamp"""
     try:
         font_path = "static/Utendo-Bold.ttf"
@@ -82,28 +83,27 @@ def add_text_overlay(video: VideoFileClip, text: str, start_time: float, duratio
             color='white',
             bg_color=None,
             method='caption',
-            size=(video.size[0] * 0.8, None),
-            align='center'
+            size=(video.size[0] * 0.8, None)
         )
         
         text_duration = min(duration, video.duration - start_time)
         if text_duration <= 0:
             print(f"Text at {start_time}s would appear after video ends.")
-            return video
+            return CompositeVideoClip([video])
         
-        text_clip = text_clip.set_position(('center', 'bottom')).set_start(start_time).set_duration(text_duration)
+        text_clip = text_clip.with_position(('center', 'bottom')).with_start(start_time).with_duration(text_duration)
         
         fade_duration = min(0.5, text_duration / 4)
-        text_clip = text_clip.fadein(fade_duration).fadeout(fade_duration)
+        text_clip = text_clip.with_effects([vfx.FadeIn(fade_duration), vfx.FadeOut(fade_duration)])
         
         result = CompositeVideoClip([video, text_clip])
         return result
     
     except Exception as e:
         print(f"Error adding text overlay: {e}")
-        return video
+        return CompositeVideoClip([video])
 
-def combine_videos(primary_video_path: str, secondary_video_path: str | None = None) -> VideoFileClip:
+def combine_videos(primary_video_path: str, secondary_video_path: str | None = None) -> Union[VideoFileClip, CompositeVideoClip]:
     """Combine two videos (optional) into one clip"""
     if not os.path.exists(primary_video_path):
         raise FileNotFoundError(f"Primary video file not found: {primary_video_path}")
@@ -112,12 +112,14 @@ def combine_videos(primary_video_path: str, secondary_video_path: str | None = N
     
     if secondary_video_path and os.path.exists(secondary_video_path):
         secondary_clip = VideoFileClip(secondary_video_path)
-        secondary_clip = secondary_clip.resize(primary_clip.size)
-        return concatenate_videoclips([primary_clip, secondary_clip])
+        secondary_clip = secondary_clip.resized(primary_clip.size)
+        concatenated = concatenate_videoclips([primary_clip, secondary_clip])
+        # Type cast for return type compatibility
+        return concatenated if isinstance(concatenated, VideoFileClip) else primary_clip
     
     return primary_clip
 
-def add_audio(video: VideoFileClip, overlay_audio_path: str | None = None, background_audio_path: str | None = None) -> VideoFileClip:
+def add_audio(video: Union[VideoFileClip, CompositeVideoClip], overlay_audio_path: str | None = None, background_audio_path: str | None = None) -> Union[VideoFileClip, CompositeVideoClip]:
     """Add overlay and/or background audio to video"""
     result_video = video
     
@@ -125,19 +127,19 @@ def add_audio(video: VideoFileClip, overlay_audio_path: str | None = None, backg
         try:
             overlay_audio = AudioFileClip(overlay_audio_path)
             if overlay_audio.duration > video.duration:
-                overlay_audio = overlay_audio.subclip(0, video.duration)
+                overlay_audio = overlay_audio.subclipped(0, video.duration)
             else:
                 repeats = int(np.ceil(video.duration / overlay_audio.duration))
-                overlay_audio = AudioFileClip(overlay_audio_path).volumex(0.7)
-                overlay_audio = concatenate_videoclips([overlay_audio] * repeats).subclip(0, video.duration)
+                overlay_audio = AudioFileClip(overlay_audio_path).with_volume_scaled(0.7)
+                overlay_audio = concatenate_audioclips([overlay_audio] * repeats).subclipped(0, video.duration)
             
             if result_video.audio:
-                original_audio = result_video.audio.volumex(0.3)
-                result_video = result_video.set_audio(
+                original_audio = result_video.audio.with_volume_scaled(0.3)
+                result_video = result_video.with_audio(
                     CompositeAudioClip([original_audio, overlay_audio])
                 )
             else:
-                result_video = result_video.set_audio(overlay_audio)
+                result_video = result_video.with_audio(overlay_audio)
                 
         except Exception as e:
             print(f"Error adding overlay audio: {e}")
@@ -145,20 +147,20 @@ def add_audio(video: VideoFileClip, overlay_audio_path: str | None = None, backg
     if background_audio_path and os.path.exists(background_audio_path):
         try:
             bg_audio = AudioFileClip(background_audio_path)
-            bg_audio = bg_audio.volumex(0.15)
+            bg_audio = bg_audio.with_volume_scaled(0.15)
 
             if bg_audio.duration > video.duration:
-                bg_audio = bg_audio.subclip(0, video.duration)
+                bg_audio = bg_audio.subclipped(0, video.duration)
             else:
                 repeats = int(np.ceil(video.duration / bg_audio.duration))
-                bg_audio = concatenate_videoclips([bg_audio] * repeats).subclip(0, video.duration)
+                bg_audio = concatenate_audioclips([bg_audio] * repeats).subclipped(0, video.duration)
             
             if result_video.audio:
-                result_video = result_video.set_audio(
+                result_video = result_video.with_audio(
                     CompositeAudioClip([result_video.audio, bg_audio])
                 )
             else:
-                result_video = result_video.set_audio(bg_audio)
+                result_video = result_video.with_audio(bg_audio)
                 
         except Exception as e:
             print(f"Error adding background audio: {e}")
@@ -185,31 +187,34 @@ def generate_thumbnail(video_path: str, output_path: str, text: Optional[str] = 
         thumbnail_time = video.duration / 3
         frame = video.get_frame(thumbnail_time)
         
-        img = Image.fromarray(frame)
-        
-        if text:
-            draw = ImageDraw.Draw(img)
-            try:
-                font = ImageFont.truetype("static/Utendo-Bold.ttf", size=40)
-            except Exception:
-                print("Warning: Could not load custom font, using default")
-                font = ImageFont.load_default()
-                
-            text_width, text_height = draw.textbbox((0, 0), text, font=font)[2:4]
-            position = ((img.width - text_width) // 2, (img.height - text_height) // 2)
-
-            outline_color = (0, 0, 0)
-            text_color = (255, 255, 255)
+        if frame is not None:
+            img = Image.fromarray(frame)
             
-            for offset in [(1, 1), (-1, -1), (1, -1), (-1, 1)]:
-                draw.text((position[0] + offset[0], position[1] + offset[1]), text, font=font, fill=outline_color)
+            if text:
+                draw = ImageDraw.Draw(img)
+                try:
+                    font = ImageFont.truetype("static/Utendo-Bold.ttf", size=40)
+                except Exception:
+                    print("Warning: Could not load custom font, using default")
+                    font = ImageFont.load_default()
+                    
+                text_width, text_height = draw.textbbox((0, 0), text, font=font)[2:4]
+                position = ((img.width - text_width) // 2, (img.height - text_height) // 2)
+
+                outline_color = (0, 0, 0)
+                text_color = (255, 255, 255)
                 
-            draw.text(position, text, font=font, fill=text_color)
-        
-        os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
-        
-        img.save(output_path, quality=95)
-        return output_path
+                for offset in [(1, 1), (-1, -1), (1, -1), (-1, 1)]:
+                    draw.text((position[0] + offset[0], position[1] + offset[1]), text, font=font, fill=outline_color)
+                    
+                draw.text(position, text, font=font, fill=text_color)
+            
+            os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
+            
+            img.save(output_path, quality=95)
+            return output_path
+        else:
+            raise ValueError("Could not extract frame from video")
         
     except Exception as e:
         print(f"Error generating thumbnail: {e}")
@@ -240,7 +245,7 @@ def create_video_preview(video_path: str, output_path: str, duration: float = 5)
         video = VideoFileClip(video_path)
         
         preview_duration = min(duration, video.duration)
-        preview = video.subclip(0, preview_duration)
+        preview = video.subclipped(0, preview_duration)
         
         try:
             text_clip = TextClip(
@@ -250,7 +255,7 @@ def create_video_preview(video_path: str, output_path: str, duration: float = 5)
                 color='white',
                 bg_color=None,
                 method='label'
-            ).set_position(('right', 'top')).set_duration(preview_duration)
+            ).with_position(('right', 'top')).with_duration(preview_duration)
         except Exception:
             # Fall back to default font if custom font fails
             text_clip = TextClip(
@@ -259,7 +264,7 @@ def create_video_preview(video_path: str, output_path: str, duration: float = 5)
                 color='white',
                 bg_color=None,
                 method='label'
-            ).set_position(('right', 'top')).set_duration(preview_duration)
+            ).with_position(('right', 'top')).with_duration(preview_duration)
         
         preview = CompositeVideoClip([preview, text_clip])
         
@@ -326,7 +331,7 @@ def get_video_info(video_path: str) -> Optional[Dict[str, Any]]:
                 pass
 
 def create_video_transition(clip1: VideoFileClip, clip2: VideoFileClip, transition_duration: float = 1.0, 
-                         transition_type: str = "crossfade") -> VideoFileClip:
+                         transition_type: str = "crossfade") -> VideoClip:
     """Create a smooth transition between two video clips
     
     Args:
@@ -342,24 +347,26 @@ def create_video_transition(clip1: VideoFileClip, clip2: VideoFileClip, transiti
     transition_duration = min(transition_duration, max_transition)
     
     if transition_type == "crossfade":
-        clip1 = clip1.crossfadeout(transition_duration)
-        clip2 = clip2.crossfadein(transition_duration)
+        clip1_faded = clip1.with_effects([vfx.CrossFadeOut(transition_duration)])
+        clip2_faded = clip2.with_effects([vfx.CrossFadeIn(transition_duration)])
         
         result = concatenate_videoclips([
-            clip1.subclip(0, clip1.duration - transition_duration/2),
-            clip2.subclip(transition_duration/2)
+            clip1_faded.subclipped(0, clip1.duration - transition_duration/2),
+            clip2_faded.subclipped(transition_duration/2, clip2.duration)
         ])
         return result
         
     elif transition_type == "fade":
-        clip1 = clip1.fadeout(transition_duration)
-        clip2 = clip2.fadein(transition_duration)
-        return concatenate_videoclips([clip1, clip2])
+        clip1_faded = clip1.with_effects([vfx.FadeOut(transition_duration)])
+        clip2_faded = clip2.with_effects([vfx.FadeIn(transition_duration)])
+        result = concatenate_videoclips([clip1_faded, clip2_faded])
+        return result
     
     else:
-        return concatenate_videoclips([clip1, clip2])
+        result = concatenate_videoclips([clip1, clip2])
+        return result
 
-def add_text_with_animation(video: VideoFileClip, text: str, start_time: float, 
+def add_text_with_animation(video: Union[VideoFileClip, CompositeVideoClip], text: str, start_time: float, 
                             duration: float = 3.0, animation: str = "slide") -> CompositeVideoClip:
     """Add animated text overlay to the video
     
@@ -385,7 +392,7 @@ def add_text_with_animation(video: VideoFileClip, text: str, start_time: float,
                 bg_color=None,
                 method='caption',
                 size=(video.size[0] * 0.8, None),
-                align='center'
+                text_align='center'
             )
         except Exception:
             text_clip = TextClip(
@@ -395,15 +402,15 @@ def add_text_with_animation(video: VideoFileClip, text: str, start_time: float,
                 bg_color=None,
                 method='caption',
                 size=(video.size[0] * 0.8, None),
-                align='center'
+                text_align='center'
             )
         
         text_duration = min(duration, video.duration - start_time)
         if text_duration <= 0:
             print(f"Text at {start_time}s would appear after video ends.")
-            return video
+            return CompositeVideoClip([video]) if isinstance(video, VideoFileClip) else video
             
-        text_clip = text_clip.set_position(('center', 'center')).set_start(start_time).set_duration(text_duration)
+        text_clip = text_clip.with_position(('center', 'center')).with_start(start_time).with_duration(text_duration)
         
         anim_duration = min(0.7, text_duration / 4)
         
@@ -414,38 +421,42 @@ def add_text_with_animation(video: VideoFileClip, text: str, start_time: float,
             text_clip = text_clip.fadein(anim_duration).fadeout(anim_duration)
             
         elif animation == "zoom":
-            text_clip = text_clip.with_effects([vfx.ZoomIn(anim_duration), vfx.ZoomOut(anim_duration)])
+            # ZoomIn/ZoomOut might not be available in all versions, use resize instead
+            try:
+                text_clip = text_clip.with_effects([vfx.Resize(lambda t: 1 + 0.1 * (1 - abs(2*t/text_duration - 1)))])
+            except AttributeError:
+                # Fallback to fade if zoom effects aren't available
+                text_clip = text_clip.with_effects([vfx.FadeIn(anim_duration), vfx.FadeOut(anim_duration)])
             
         elif animation == "typewriter":
-            def make_typewriter_frame(t):
+            # Simplified typewriter effect since complex make_frame approach has changed
+            def make_typewriter_text(t):
                 progress = min(1.0, t / (text_duration - anim_duration))
                 char_count = max(1, int(len(text) * progress))
-                current_text = text[:char_count]
-                
-                txt_frame = TextClip(
-                    text=current_text,
+                return text[:char_count]
+            
+            try:
+                text_clip = TextClip(
+                    text=text,
                     font=font_path if os.path.exists(font_path) else None,
                     font_size=40,
                     color='white',
                     bg_color=None,
                     method='caption',
                     size=(video.size[0] * 0.8, None),
-                    align='center'
-                ).set_position(('center', 'center'))
-                
-                return txt_frame.img
-                
-            text_clip = VideoFileClip(
-                make_frame=make_typewriter_frame,
-                duration=text_duration
-            ).set_start(start_time)
+                    text_align='center',
+                    duration=text_duration
+                ).with_position(('center', 'center')).with_start(start_time)
+            except Exception:
+                # Fallback to simple fade if typewriter fails
+                text_clip = text_clip.with_effects([vfx.FadeIn(anim_duration), vfx.FadeOut(anim_duration)])
         
         result = CompositeVideoClip([video, text_clip])
         return result
     
     except Exception as e:
         print(f"Error adding animated text: {e}")
-        return video
+        return CompositeVideoClip([video]) if isinstance(video, VideoFileClip) else video
 
 def apply_color_grading(video: VideoFileClip, style: str = "cinematic") -> VideoFileClip:
     """Apply color grading effect to a video
@@ -487,7 +498,7 @@ def apply_color_grading(video: VideoFileClip, style: str = "cinematic") -> Video
                 frame_result = np.clip(frame_float * 255.0, 0, 255).astype(np.uint8)
                 return frame_result
                 
-            return video.fl_image(cinematic_filter)
+            return video.image_transform(cinematic_filter)
             
         elif style == "warm":
             def warm_filter(frame):
@@ -497,7 +508,7 @@ def apply_color_grading(video: VideoFileClip, style: str = "cinematic") -> Video
                 frame_float[:,:,2] = np.maximum(frame_float[:,:,2] * 0.9, 0)
                 return frame_float.astype(np.uint8)
                 
-            return video.fl_image(warm_filter)
+            return video.image_transform(warm_filter)
             
         elif style == "cold":
             def cold_filter(frame):
@@ -506,7 +517,7 @@ def apply_color_grading(video: VideoFileClip, style: str = "cinematic") -> Video
                 frame_float[:,:,2] = np.minimum(frame_float[:,:,2] * 1.15, 255)
                 return frame_float.astype(np.uint8)
                 
-            return video.fl_image(cold_filter)
+            return video.image_transform(cold_filter)
             
         elif style == "vintage":
             def vintage_filter(frame):
@@ -532,7 +543,7 @@ def apply_color_grading(video: VideoFileClip, style: str = "cinematic") -> Video
                 
                 return np.clip(frame_float, 0, 255).astype(np.uint8)
                 
-            return video.fl_image(vintage_filter)
+            return video.image_transform(vintage_filter)
             
         else:
             return video

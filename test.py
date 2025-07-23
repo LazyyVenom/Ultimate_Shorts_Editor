@@ -1,4 +1,4 @@
-from editor.utils import add_heading
+from vid_editor.utils import add_heading
 from moviepy import VideoFileClip
 
 video_path = "testing_stuff/vid_1.mp4"

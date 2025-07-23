@@ -8,7 +8,7 @@ import sys
 import tempfile
 import time
 import shutil
-from editor.utils import (
+from vid_editor.utils import (
     add_heading, add_image_overlay, add_text_overlay,
     combine_videos, add_audio, generate_thumbnail,
     create_video_preview, get_video_info
@@ -946,10 +946,10 @@ class UI(QWidget):
             self,
             "Success",
             f"Video processing completed successfully!\n\nSaved to: {output_path}\n\nWould you like to open the folder?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            QMessageBox.Yes | QMessageBox.No
         )
         
-        if result == QMessageBox.StandardButton.Yes:
+        if result == QMessageBox.Yes:
             # Open the folder containing the output file
             os.system(f"open '{os.path.dirname(output_path)}'")
     
