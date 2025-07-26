@@ -381,15 +381,15 @@ def main():
     # Initialize captioner
     captioner = HinglishCaptioner(model_size="medium")
     
-    # Example audio file path
-    audio_path = "../testing_stuff/overlay_audio.wav"
+    # Example usage - replace with your audio file path
+    audio_path = "path/to/your/audio.wav"
     
     if os.path.exists(audio_path):
         try:
             # Generate captions
             captions, output_paths = captioner.generate_captions_from_audio(
                 audio_path, 
-                output_dir="../testing_stuff",
+                output_dir="output/",
                 save_formats=["json", "srt", "vtt"]
             )
             
@@ -406,7 +406,7 @@ def main():
         except Exception as e:
             print(f"Error: {e}")
     else:
-        print(f"Audio file not found: {audio_path}")
+        print("Audio file not found. Please provide a valid audio file path.")
 
 
 if __name__ == "__main__":

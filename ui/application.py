@@ -488,7 +488,6 @@ class UI(QWidget):
         bg_audio_layout.addWidget(self.label_bg_audio)
         self.input_bg_audio = QLineEdit()
         self.input_bg_audio.setPlaceholderText("Select background audio...")
-        self.input_bg_audio.setText("/Users/anubhavchoubey/Documents/Codes/Own_Projects/Ultimate_Shorts_Editor/testing_stuff/overlay_audio.wav")
         bg_audio_layout.addWidget(self.input_bg_audio)
         self.browse_bg_audio_btn = QPushButton("Browse")
         self.browse_bg_audio_btn.setObjectName("browse_btn")
