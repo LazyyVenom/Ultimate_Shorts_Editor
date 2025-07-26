@@ -13,7 +13,7 @@ class SimpleCaptionIntegrator:
     Simple caption integrator for basic subtitle functionality
     Compatible with MoviePy 2.x API
     """
-    
+     
     def __init__(self):
         """Initialize the simple caption integrator"""
         pass
