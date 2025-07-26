@@ -10,6 +10,15 @@ from moviepy import (  # type: ignore
     concatenate_audioclips
 )
 
+# Import caption integration
+try:
+    from caption_integration import VideoCaptionIntegrator
+    CAPTIONS_AVAILABLE = True
+except ImportError:
+    print("⚠️  Caption integration not available")
+    CAPTIONS_AVAILABLE = False
+    VideoCaptionIntegrator = None
+
 def add_heading(video: VideoFileClip, heading: str) -> CompositeVideoClip:
     text_clip = TextClip(
         text=heading,
@@ -141,6 +150,43 @@ def add_text_overlay(video: Union[VideoFileClip, CompositeVideoClip], text: str,
     
     except Exception as e:
         print(f"Error adding text overlay: {e}")
+        return CompositeVideoClip([video])
+
+def add_captions_from_audio(video: Union[VideoFileClip, CompositeVideoClip], audio_path: str, font_path: Optional[str] = None) -> CompositeVideoClip:
+    """Add auto-generated captions from audio file to video"""
+    if not CAPTIONS_AVAILABLE or VideoCaptionIntegrator is None:
+        print("📝 Caption integration not available - skipping captions")
+        return CompositeVideoClip([video])
+    
+    if not os.path.exists(audio_path):
+        print(f"Audio file not found for captions: {audio_path}")
+        return CompositeVideoClip([video])
+    
+    try:
+        print("🎤 Generating captions from audio...")
+        
+        # Initialize caption integrator
+        integrator = VideoCaptionIntegrator(model_size="base")
+        
+        # Use the same font as text overlays
+        if font_path is None:
+            font_path = "static/Utendo-Bold.ttf"
+        
+        # Add captions to video with word-by-word display
+        result = integrator.add_captions_to_video(
+            video=video,
+            audio_path=audio_path,
+            font_path=font_path if os.path.exists(font_path) else None,
+            font_size=32,  # Slightly smaller than manual text overlays
+            font_color='white',
+            word_by_word=True  # Enable word-by-word captions
+        )
+        
+        print("✅ Captions added successfully")
+        return result
+        
+    except Exception as e:
+        print(f"Error adding captions from audio: {e}")
         return CompositeVideoClip([video])
 
 def combine_videos(primary_video_path: str, secondary_video_path: str | None = None) -> Union[VideoFileClip, CompositeVideoClip]:

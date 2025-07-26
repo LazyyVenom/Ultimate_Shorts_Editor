@@ -11,7 +11,7 @@ import shutil
 from vid_editor.utils import (
     add_heading, add_image_overlay, add_text_overlay,
     combine_videos, add_audio, generate_thumbnail,
-    create_video_preview, get_video_info
+    create_video_preview, get_video_info, add_captions_from_audio
 )
 
 
@@ -62,6 +62,7 @@ class VideoProcessingThread(QThread):
             bg_audio = self.params.get('bg_audio')
             image_overlays = self.params.get('image_overlays', [])
             text_overlays = self.params.get('text_overlays', [])
+            auto_captions = self.params.get('auto_captions', False)
             output_path = self.params.get('output_path')
             
             # Progress updates
@@ -89,6 +90,17 @@ class VideoProcessingThread(QThread):
                     if text_content:
                         time_value = parse_timestamp(timestamp)
                         video = add_text_overlay(video, text_content, time_value)
+                
+                self.progress_signal.emit(75)
+                
+                # Add auto-generated captions from overlay audio (if enabled and available)
+                if auto_captions and overlay_audio and os.path.exists(overlay_audio):
+                    print("🎤 Adding auto-generated captions from overlay audio...")
+                    video = add_captions_from_audio(video, overlay_audio)
+                elif auto_captions:
+                    print("⚠️  Auto-captions enabled but no overlay audio available")
+                else:
+                    print("ℹ️  Auto-captions disabled")
                 
                 self.progress_signal.emit(90)
                 
@@ -481,6 +493,76 @@ class UI(QWidget):
         self.browse_bg_audio_btn.clicked.connect(lambda: self.browse_file(self.input_bg_audio, "Audio Files (*.mp3 *.wav *.aac *.flac)"))
         bg_audio_layout.addWidget(self.browse_bg_audio_btn)
         audio_layout.addLayout(bg_audio_layout)
+        
+        # Auto-generate captions checkbox
+        caption_layout = QHBoxLayout()
+        caption_layout.setSpacing(8)
+        # Import QCheckBox
+        from PyQt5.QtWidgets import QCheckBox
+        self.auto_captions_checkbox = QCheckBox("Auto-generate captions from overlay audio")
+        self.auto_captions_checkbox.setStyleSheet("""
+            QCheckBox {
+                color: #ffffff;
+                font-size: 12px;
+                font-weight: 500;
+                margin: 4px 0;
+            }
+            QCheckBox::indicator {
+                width: 16px;
+                height: 16px;
+                border: 1px solid #3a3a3a;
+                border-radius: 3px;
+                background-color: #1a1a1a;
+            }
+            QCheckBox::indicator:checked {
+                background-color: #007aff;
+                border: 1px solid #007aff;
+            }
+            QCheckBox::indicator:checked:hover {
+                background-color: #0056cc;
+            }
+            QCheckBox::indicator:hover {
+                border: 1px solid #4a4a4a;
+            }
+        """)
+        self.auto_captions_checkbox.setChecked(True)  # Default enabled
+        caption_layout.addWidget(self.auto_captions_checkbox)
+        caption_layout.addStretch()
+        audio_layout.addLayout(caption_layout)
+        
+        # Word-by-word captions checkbox
+        word_layout = QHBoxLayout()
+        word_layout.setSpacing(8)
+        self.word_by_word_checkbox = QCheckBox("Show captions one word at a time (recommended)")
+        self.word_by_word_checkbox.setStyleSheet("""
+            QCheckBox {
+                color: #ffffff;
+                font-size: 12px;
+                font-weight: 500;
+                margin: 4px 0;
+            }
+            QCheckBox::indicator {
+                width: 16px;
+                height: 16px;
+                border: 1px solid #3a3a3a;
+                border-radius: 3px;
+                background-color: #1a1a1a;
+            }
+            QCheckBox::indicator:checked {
+                background-color: #007aff;
+                border: 1px solid #007aff;
+            }
+            QCheckBox::indicator:checked:hover {
+                background-color: #0056cc;
+            }
+            QCheckBox::indicator:hover {
+                border: 1px solid #4a4a4a;
+            }
+        """)
+        self.word_by_word_checkbox.setChecked(True)  # Default enabled
+        word_layout.addWidget(self.word_by_word_checkbox)
+        word_layout.addStretch()
+        audio_layout.addLayout(word_layout)
         
         main_layout.addWidget(audio_frame)
         
@@ -920,6 +1002,7 @@ class UI(QWidget):
             'bg_audio': self.input_bg_audio.text() if self.input_bg_audio.text() and os.path.exists(self.input_bg_audio.text()) else None,
             'image_overlays': [(img.text(), ts.text()) for img, ts, _ in self.images if img.text()],
             'text_overlays': [(txt.text(), ts.text()) for txt, ts, _ in self.texts if txt.text()],
+            'auto_captions': self.auto_captions_checkbox.isChecked(),
             'output_path': output_path
         }
         
@@ -954,6 +1037,8 @@ class UI(QWidget):
             text_content = text_input.text() or 'Not specified'
             timestamp = ts_input.text() or 'Not specified'
             print(f"   💬 Text {idx+1}: '{text_content}' (at {timestamp}s)")
+        
+        print(f"🎤 Auto-generate Captions: {'Enabled' if self.auto_captions_checkbox.isChecked() else 'Disabled'}")
         
         print("="*60)
         print(f"✅ Video processing started! Your video will be saved to: {output_path}")

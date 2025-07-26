@@ -1,0 +1,498 @@
+[
+  {
+    "start": 0.3,
+    "end": 2.7,
+    "text": "Coding till 2020 LP got this hard asix",
+    "words": [
+      {
+        "word": " Coding",
+        "start": 0.3,
+        "end": 0.88,
+        "probability": 0.5025896728038788
+      },
+      {
+        "word": " till",
+        "start": 0.88,
+        "end": 1.08,
+        "probability": 0.3814903199672699
+      },
+      {
+        "word": " 2020",
+        "start": 1.08,
+        "end": 1.36,
+        "probability": 0.4445982277393341
+      },
+      {
+        "word": " LP",
+        "start": 1.36,
+        "end": 1.72,
+        "probability": 0.6072919964790344
+      },
+      {
+        "word": " got",
+        "start": 1.72,
+        "end": 1.82,
+        "probability": 0.06488701701164246
+      },
+      {
+        "word": " this",
+        "start": 1.82,
+        "end": 2.0,
+        "probability": 0.30132508277893066
+      },
+      {
+        "word": " hard",
+        "start": 2.0,
+        "end": 2.26,
+        "probability": 0.048037901520729065
+      },
+      {
+        "word": " asix",
+        "start": 2.26,
+        "end": 2.7,
+        "probability": 0.3784179538488388
+      }
+    ],
+    "formatted_text": "Coding till 2020 LP got this hard asix",
+    "lines": [
+      "Coding till 2020 LP got this hard asix"
+    ]
+  },
+  {
+    "start": 4.94,
+    "end": 8.4,
+    "text": "Pyaar asixin 3D modelling is such a hard thing",
+    "words": [
+      {
+        "word": " Pyaar",
+        "start": 4.94,
+        "end": 5.34,
+        "probability": 0.32966800096134347
+      },
+      {
+        "word": " asixin",
+        "start": 5.34,
+        "end": 5.66,
+        "probability": 0.2753326917688052
+      },
+      {
+        "word": " 3D",
+        "start": 5.66,
+        "end": 6.18,
+        "probability": 0.8093178272247314
+      },
+      {
+        "word": " modelling",
+        "start": 6.18,
+        "end": 6.46,
+        "probability": 0.6639747023582458
+      },
+      {
+        "word": " is",
+        "start": 6.46,
+        "end": 6.72,
+        "probability": 0.5988680720329285
+      },
+      {
+        "word": " such",
+        "start": 6.72,
+        "end": 6.88,
+        "probability": 0.10055043548345566
+      },
+      {
+        "word": " a",
+        "start": 6.88,
+        "end": 7.04,
+        "probability": 0.43090367317199707
+      },
+      {
+        "word": " hard",
+        "start": 7.04,
+        "end": 7.88,
+        "probability": 0.8571932315826416
+      },
+      {
+        "word": " thing",
+        "start": 7.88,
+        "end": 8.4,
+        "probability": 0.17339998483657837
+      }
+    ],
+    "formatted_text": "Pyaar asixin 3D modelling is such a hard\nthing",
+    "lines": [
+      "Pyaar asixin 3D modelling is such a hard",
+      "thing"
+    ]
+  },
+  {
+    "start": 8.75,
+    "end": 12.11,
+    "text": "I made a pair of Asixins",
+    "words": [
+      {
+        "word": " I",
+        "start": 8.75,
+        "end": 9.53,
+        "probability": 0.46327707171440125
+      },
+      {
+        "word": " made",
+        "start": 9.53,
+        "end": 10.31,
+        "probability": 0.17011936008930206
+      },
+      {
+        "word": " a",
+        "start": 10.31,
+        "end": 10.51,
+        "probability": 0.3874495029449463
+      },
+      {
+        "word": " pair",
+        "start": 10.51,
+        "end": 10.87,
+        "probability": 0.8467916250228882
+      },
+      {
+        "word": " of",
+        "start": 10.87,
+        "end": 10.95,
+        "probability": 0.17321790754795074
+      },
+      {
+        "word": " Asixins",
+        "start": 10.95,
+        "end": 12.11,
+        "probability": 0.612495889266332
+      }
+    ],
+    "formatted_text": "I made a pair of Asixins",
+    "lines": [
+      "I made a pair of Asixins"
+    ]
+  },
+  {
+    "start": 12.11,
+    "end": 15.15,
+    "text": "and the rest of the DIA was not much, it was a bit busy",
+    "words": [
+      {
+        "word": " and",
+        "start": 12.11,
+        "end": 12.17,
+        "probability": 0.5518624186515808
+      },
+      {
+        "word": " the",
+        "start": 12.17,
+        "end": 12.35,
+        "probability": 0.05005288124084473
+      },
+      {
+        "word": " rest",
+        "start": 12.35,
+        "end": 12.45,
+        "probability": 0.29633185267448425
+      },
+      {
+        "word": " of",
+        "start": 12.45,
+        "end": 12.53,
+        "probability": 0.4926314353942871
+      },
+      {
+        "word": " the",
+        "start": 12.53,
+        "end": 12.69,
+        "probability": 0.33519378304481506
+      },
+      {
+        "word": " DIA",
+        "start": 12.69,
+        "end": 12.81,
+        "probability": 0.3786856532096863
+      },
+      {
+        "word": " was",
+        "start": 12.81,
+        "end": 13.11,
+        "probability": 0.1482151746749878
+      },
+      {
+        "word": " not",
+        "start": 13.11,
+        "end": 13.21,
+        "probability": 0.5154415965080261
+      },
+      {
+        "word": " much,",
+        "start": 13.21,
+        "end": 13.43,
+        "probability": 0.16505080461502075
+      },
+      {
+        "word": " it",
+        "start": 13.91,
+        "end": 14.35,
+        "probability": 0.17517231404781342
+      },
+      {
+        "word": " was",
+        "start": 14.35,
+        "end": 14.35,
+        "probability": 0.764310359954834
+      },
+      {
+        "word": " a",
+        "start": 14.35,
+        "end": 14.35,
+        "probability": 0.3133869171142578
+      },
+      {
+        "word": " bit",
+        "start": 14.35,
+        "end": 14.37,
+        "probability": 0.552458643913269
+      },
+      {
+        "word": " busy",
+        "start": 14.37,
+        "end": 15.15,
+        "probability": 0.6831837892532349
+      }
+    ],
+    "formatted_text": "and the rest of the DIA was not much, it\nwas a bit busy",
+    "lines": [
+      "and the rest of the DIA was not much, it",
+      "was a bit busy"
+    ]
+  },
+  {
+    "start": 16.2,
+    "end": 20.18,
+    "text": "The trial will be so soon, it will be so soon, it will be so soon, it will be so soon, it will be so soon, it will be so soon, it will be so soon",
+    "words": [
+      {
+        "word": " The",
+        "start": 16.2,
+        "end": 16.6,
+        "probability": 0.034879203885793686
+      },
+      {
+        "word": " trial",
+        "start": 16.6,
+        "end": 17.0,
+        "probability": 0.13181273639202118
+      },
+      {
+        "word": " will",
+        "start": 17.0,
+        "end": 17.34,
+        "probability": 0.21335338056087494
+      },
+      {
+        "word": " be",
+        "start": 17.34,
+        "end": 17.34,
+        "probability": 0.46203452348709106
+      },
+      {
+        "word": " so",
+        "start": 17.34,
+        "end": 17.44,
+        "probability": 0.15875129401683807
+      },
+      {
+        "word": " soon,",
+        "start": 17.44,
+        "end": 17.96,
+        "probability": 0.2653503715991974
+      },
+      {
+        "word": " it",
+        "start": 18.1,
+        "end": 18.2,
+        "probability": 0.07657255977392197
+      },
+      {
+        "word": " will",
+        "start": 18.2,
+        "end": 18.2,
+        "probability": 0.4741119146347046
+      },
+      {
+        "word": " be",
+        "start": 18.2,
+        "end": 18.2,
+        "probability": 0.47790592908859253
+      },
+      {
+        "word": " so",
+        "start": 18.2,
+        "end": 18.2,
+        "probability": 0.5666590929031372
+      },
+      {
+        "word": " soon,",
+        "start": 18.2,
+        "end": 18.74,
+        "probability": 0.8183669447898865
+      },
+      {
+        "word": " it",
+        "start": 18.8,
+        "end": 18.92,
+        "probability": 0.11653690040111542
+      },
+      {
+        "word": " will",
+        "start": 18.92,
+        "end": 19.04,
+        "probability": 0.6671034097671509
+      },
+      {
+        "word": " be",
+        "start": 19.04,
+        "end": 19.04,
+        "probability": 0.4911220371723175
+      },
+      {
+        "word": " so",
+        "start": 19.04,
+        "end": 19.16,
+        "probability": 0.29692238569259644
+      },
+      {
+        "word": " soon,",
+        "start": 19.16,
+        "end": 19.16,
+        "probability": 0.5826820135116577
+      },
+      {
+        "word": " it",
+        "start": 19.16,
+        "end": 19.22,
+        "probability": 0.15519404411315918
+      },
+      {
+        "word": " will",
+        "start": 19.22,
+        "end": 19.28,
+        "probability": 0.7856379151344299
+      },
+      {
+        "word": " be",
+        "start": 19.28,
+        "end": 19.48,
+        "probability": 0.6657443642616272
+      },
+      {
+        "word": " so",
+        "start": 19.48,
+        "end": 19.58,
+        "probability": 0.6883808970451355
+      },
+      {
+        "word": " soon,",
+        "start": 19.58,
+        "end": 19.62,
+        "probability": 0.7733912467956543
+      },
+      {
+        "word": " it",
+        "start": 19.62,
+        "end": 19.62,
+        "probability": 0.538687527179718
+      },
+      {
+        "word": " will",
+        "start": 19.62,
+        "end": 19.62,
+        "probability": 0.9410170316696167
+      },
+      {
+        "word": " be",
+        "start": 19.62,
+        "end": 19.62,
+        "probability": 0.8858463764190674
+      },
+      {
+        "word": " so",
+        "start": 19.62,
+        "end": 19.62,
+        "probability": 0.919887125492096
+      },
+      {
+        "word": " soon,",
+        "start": 19.62,
+        "end": 19.66,
+        "probability": 0.955230712890625
+      },
+      {
+        "word": " it",
+        "start": 20.02,
+        "end": 20.02,
+        "probability": 0.8709115386009216
+      },
+      {
+        "word": " will",
+        "start": 20.02,
+        "end": 20.02,
+        "probability": 0.9808275699615479
+      },
+      {
+        "word": " be",
+        "start": 20.02,
+        "end": 20.02,
+        "probability": 0.9773016571998596
+      },
+      {
+        "word": " so",
+        "start": 20.02,
+        "end": 20.02,
+        "probability": 0.9872627854347229
+      },
+      {
+        "word": " soon,",
+        "start": 20.02,
+        "end": 20.02,
+        "probability": 0.97402024269104
+      },
+      {
+        "word": " it",
+        "start": 20.02,
+        "end": 20.02,
+        "probability": 0.9326236248016357
+      },
+      {
+        "word": " will",
+        "start": 20.02,
+        "end": 20.02,
+        "probability": 0.9834716320037842
+      },
+      {
+        "word": " be",
+        "start": 20.02,
+        "end": 20.02,
+        "probability": 0.9886647462844849
+      },
+      {
+        "word": " so",
+        "start": 20.02,
+        "end": 20.02,
+        "probability": 0.9936400055885315
+      },
+      {
+        "word": " soon",
+        "start": 20.02,
+        "end": 20.18,
+        "probability": 0.9833943843841553
+      }
+    ],
+    "formatted_text": "The trial will be so soon, it will be so\nsoon, it will be so soon, it will be ...",
+    "lines": [
+      "The trial will be so soon, it will be so",
+      "soon, it will be so soon, it will be ..."
+    ]
+  }
+]
