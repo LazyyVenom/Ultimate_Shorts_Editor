@@ -152,8 +152,15 @@ def add_text_overlay(video: Union[VideoFileClip, CompositeVideoClip], text: str,
         print(f"Error adding text overlay: {e}")
         return CompositeVideoClip([video])
 
-def add_captions_from_audio(video: Union[VideoFileClip, CompositeVideoClip], audio_path: str, font_path: Optional[str] = None) -> CompositeVideoClip:
-    """Add auto-generated captions from audio file to video"""
+def add_captions_from_audio(video: Union[VideoFileClip, CompositeVideoClip], audio_path: str, font_path: Optional[str] = None, word_by_word: bool = True) -> CompositeVideoClip:
+    """Add auto-generated captions from audio file to video
+    
+    Args:
+        video: Video to add captions to
+        audio_path: Path to audio file for caption generation
+        font_path: Path to font file (optional)
+        word_by_word: Whether to show captions one word at a time (default: True)
+    """
     if not CAPTIONS_AVAILABLE or VideoCaptionIntegrator is None:
         print("📝 Caption integration not available - skipping captions")
         return CompositeVideoClip([video])
@@ -163,7 +170,8 @@ def add_captions_from_audio(video: Union[VideoFileClip, CompositeVideoClip], aud
         return CompositeVideoClip([video])
     
     try:
-        print("🎤 Generating captions from audio...")
+        caption_mode = "word-by-word" if word_by_word else "full-text"
+        print(f"🎤 Generating captions from audio ({caption_mode})...")
         
         # Initialize caption integrator
         integrator = VideoCaptionIntegrator(model_size="base")
@@ -172,14 +180,14 @@ def add_captions_from_audio(video: Union[VideoFileClip, CompositeVideoClip], aud
         if font_path is None:
             font_path = "static/Utendo-Bold.ttf"
         
-        # Add captions to video with word-by-word display
+        # Add captions to video with configurable word-by-word display
         result = integrator.add_captions_to_video(
             video=video,
             audio_path=audio_path,
             font_path=font_path if os.path.exists(font_path) else None,
             font_size=32,  # Slightly smaller than manual text overlays
             font_color='white',
-            word_by_word=True  # Enable word-by-word captions
+            word_by_word=word_by_word
         )
         
         print("✅ Captions added successfully")

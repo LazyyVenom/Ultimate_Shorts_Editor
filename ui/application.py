@@ -63,6 +63,7 @@ class VideoProcessingThread(QThread):
             image_overlays = self.params.get('image_overlays', [])
             text_overlays = self.params.get('text_overlays', [])
             auto_captions = self.params.get('auto_captions', False)
+            word_by_word = self.params.get('word_by_word', True)
             output_path = self.params.get('output_path')
             
             # Progress updates
@@ -95,8 +96,9 @@ class VideoProcessingThread(QThread):
                 
                 # Add auto-generated captions from overlay audio (if enabled and available)
                 if auto_captions and overlay_audio and os.path.exists(overlay_audio):
-                    print("🎤 Adding auto-generated captions from overlay audio...")
-                    video = add_captions_from_audio(video, overlay_audio)
+                    caption_mode = "word-by-word" if word_by_word else "full-text"
+                    print(f"🎤 Adding auto-generated captions from overlay audio ({caption_mode})...")
+                    video = add_captions_from_audio(video, overlay_audio, word_by_word=word_by_word)
                 elif auto_captions:
                     print("⚠️  Auto-captions enabled but no overlay audio available")
                 else:
@@ -1003,6 +1005,7 @@ class UI(QWidget):
             'image_overlays': [(img.text(), ts.text()) for img, ts, _ in self.images if img.text()],
             'text_overlays': [(txt.text(), ts.text()) for txt, ts, _ in self.texts if txt.text()],
             'auto_captions': self.auto_captions_checkbox.isChecked(),
+            'word_by_word': self.word_by_word_checkbox.isChecked(),
             'output_path': output_path
         }
         
@@ -1039,6 +1042,9 @@ class UI(QWidget):
             print(f"   💬 Text {idx+1}: '{text_content}' (at {timestamp}s)")
         
         print(f"🎤 Auto-generate Captions: {'Enabled' if self.auto_captions_checkbox.isChecked() else 'Disabled'}")
+        if self.auto_captions_checkbox.isChecked():
+            caption_mode = "Word-by-word" if self.word_by_word_checkbox.isChecked() else "Full-text"
+            print(f"   📝 Caption Mode: {caption_mode}")
         
         print("="*60)
         print(f"✅ Video processing started! Your video will be saved to: {output_path}")

@@ -239,9 +239,10 @@ class VideoCaptionIntegrator:
             from audio_opp.captioner import HinglishCaptioner
             self.captioner = HinglishCaptioner(model_size=model_size)
             self.has_advanced_captioner = True
-            print("✅ Advanced Hinglish captioner loaded")
-        except ImportError:
-            print("⚠️  Advanced captioner not available, using simple captions")
+            print(f"✅ Advanced Hinglish captioner loaded (model: {model_size})")
+        except ImportError as e:
+            print(f"⚠️  Advanced captioner not available: {e}")
+            print("Using simple captions instead")
             self.captioner = None
             self.has_advanced_captioner = False
     
@@ -304,40 +305,74 @@ class VideoCaptionIntegrator:
         font_color: str,
         word_by_word: bool = True
     ) -> CompositeVideoClip:
-        """Generate captions from audio using advanced captioner"""
+        """Generate captions from audio using advanced captioner with word-level timestamps"""
         if not self.has_advanced_captioner or self.captioner is None:
             print("❌ Advanced captioner not available")
             return CompositeVideoClip([video])
             
         try:
-            # Generate captions
-            captions, _ = self.captioner.generate_captions_from_audio(
-                audio_path,
-                save_formats=["json"]
+            print("🎤 Transcribing audio with word-level timestamps...")
+            
+            # Generate captions with word-level timestamps
+            captions = self.captioner.transcribe_audio(
+                audio_path=audio_path,
+                language="hi",  # Hindi for Hinglish
+                task="transcribe",
+                vad_filter=True
             )
             
-            # Format captions for video display
-            formatted_captions = self.captioner.format_captions_for_video(
-                captions,
-                max_chars_per_line=35,
-                max_lines=2
-            )
+            print(f"📝 Generated {len(captions)} caption segments")
             
-            # Convert to simple format
+            # Convert to simple format for word-by-word display
             simple_captions = []
-            for caption in formatted_captions:
-                simple_captions.append({
-                    'text': caption.get('formatted_text', caption['text']),
-                    'start': caption['start'],
-                    'duration': caption['end'] - caption['start']
-                })
+            
+            if word_by_word:
+                # Use word-level timestamps for individual word display
+                for segment in captions:
+                    if 'words' in segment and segment['words']:
+                        # Use individual word timestamps
+                        for word_info in segment['words']:
+                            word_text = word_info['word'].strip()
+                            if word_text:  # Skip empty words
+                                simple_captions.append({
+                                    'text': word_text,
+                                    'start': word_info['start'],
+                                    'duration': word_info['end'] - word_info['start']
+                                })
+                    else:
+                        # Fallback: split segment text into words with even timing
+                        segment_text = segment['text'].strip()
+                        words = segment_text.split()
+                        if words:
+                            segment_duration = segment['end'] - segment['start']
+                            word_duration = segment_duration / len(words)
+                            
+                            for i, word in enumerate(words):
+                                word_start = segment['start'] + (i * word_duration)
+                                simple_captions.append({
+                                    'text': word,
+                                    'start': word_start,
+                                    'duration': word_duration
+                                })
+            else:
+                # Full-text segments
+                for segment in captions:
+                    simple_captions.append({
+                        'text': segment['text'],
+                        'start': segment['start'],
+                        'duration': segment['end'] - segment['start']
+                    })
+            
+            print(f"🎬 Creating {len(simple_captions)} caption clips ({'word-by-word' if word_by_word else 'full-text'})")
             
             return self.simple_integrator.add_simple_captions(
-                video, simple_captions, font_path, font_size, font_color, word_by_word=word_by_word
+                video, simple_captions, font_path, font_size, font_color, word_by_word=False  # Already split into words
             )
             
         except Exception as e:
             print(f"❌ Error generating captions from audio: {e}")
+            import traceback
+            traceback.print_exc()
             return CompositeVideoClip([video])
 
 
