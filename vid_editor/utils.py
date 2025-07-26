@@ -33,7 +33,7 @@ def add_heading(video: VideoFileClip, heading: str) -> CompositeVideoClip:
     return video_with_text
 
 def add_image_overlay(video: Union[VideoFileClip, CompositeVideoClip], image_path: str, start_time: float, duration: float = 5.0) -> CompositeVideoClip:
-    """Add an image overlay to the video at a specific timestamp"""
+    """Add an image overlay to the video at a specific timestamp with slide-up entrance and slide-down exit"""
     if not os.path.exists(image_path):
         print(f"Image file not found: {image_path}")
         return CompositeVideoClip([video])
@@ -52,8 +52,6 @@ def add_image_overlay(video: Union[VideoFileClip, CompositeVideoClip], image_pat
         new_height = int(img_height * scale_factor)
         
         img_clip = img_clip.resized((new_width, new_height))
-        # Type ignore for MoviePy typing issue - resized() returns correct type at runtime
-        img_clip = img_clip.with_position(('center', 'center'))  # type: ignore
         
         img_duration = min(duration, video.duration - start_time)
         if img_duration <= 0:
@@ -62,8 +60,47 @@ def add_image_overlay(video: Union[VideoFileClip, CompositeVideoClip], image_pat
         
         img_clip = img_clip.with_start(start_time).with_duration(img_duration)
         
+        # Position the image in the center
+        center_x = (video_width - new_width) // 2
+        center_y = (video_height - new_height) // 2
+        img_clip = img_clip.with_position((center_x, center_y))
+        
+        # Add fade effects for smooth entrance and exit
         fade_duration = min(0.5, img_duration / 4)
         img_clip = img_clip.with_effects([vfx.FadeIn(fade_duration), vfx.FadeOut(fade_duration)])
+        
+        # For now, let's use a simple slide effect using moviepy's built-in capabilities
+        # We'll create the slide effect by manipulating the position over time
+        if img_duration > 1.0:  # Only animate if duration is long enough
+            
+            # Create slide-up entrance effect
+            animation_duration = min(0.6, img_duration / 3)
+            
+            def slide_position(t):
+                if t < animation_duration:
+                    # Slide up from bottom
+                    progress = t / animation_duration
+                    # Ease-out effect
+                    progress = 1 - (1 - progress) ** 2
+                    # Start from below screen
+                    start_y = video_height
+                    current_y = start_y - (start_y - center_y) * progress
+                    return (center_x, max(0, min(video_height, int(current_y))))
+                elif t > img_duration - animation_duration:
+                    # Slide down to bottom
+                    exit_progress = (t - (img_duration - animation_duration)) / animation_duration
+                    # Ease-in effect
+                    exit_progress = exit_progress ** 2
+                    # Move to below screen
+                    end_y = video_height
+                    current_y = center_y + (end_y - center_y) * exit_progress
+                    return (center_x, max(0, min(video_height, int(current_y))))
+                else:
+                    # Stay in center
+                    return (center_x, center_y)
+            
+            # Apply the slide animation
+            img_clip = img_clip.with_position(slide_position)
         
         result = CompositeVideoClip([video, img_clip])
         return result
@@ -76,6 +113,10 @@ def add_text_overlay(video: Union[VideoFileClip, CompositeVideoClip], text: str,
     """Add a text overlay to the video at a specific timestamp"""
     try:
         font_path = "static/Utendo-Bold.ttf"
+        
+        # Calculate text width as integer
+        text_width = int(video.size[0] * 0.8)
+        
         text_clip = TextClip(
             text=text,
             font=font_path,
@@ -83,7 +124,7 @@ def add_text_overlay(video: Union[VideoFileClip, CompositeVideoClip], text: str,
             color='white',
             bg_color=None,
             method='caption',
-            size=(video.size[0] * 0.8, None)
+            size=(text_width, None)
         )
         
         text_duration = min(duration, video.duration - start_time)

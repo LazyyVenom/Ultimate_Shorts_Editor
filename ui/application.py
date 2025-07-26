@@ -15,6 +15,34 @@ from vid_editor.utils import (
 )
 
 
+def parse_timestamp(timestamp_str: str) -> float:
+    """Parse timestamp string and return float value in seconds
+    
+    Args:
+        timestamp_str: String like '5.5s', '1.1', 'Not specifieds', etc.
+        
+    Returns:
+        Float value in seconds, or 0.0 if parsing fails
+    """
+    if not timestamp_str or timestamp_str.strip() == '':
+        return 0.0
+    
+    # Clean the string - remove 's' suffix and whitespace
+    clean_str = timestamp_str.strip().lower()
+    if clean_str.endswith('s'):
+        clean_str = clean_str[:-1]
+    
+    # Handle special cases
+    if 'not specified' in clean_str or clean_str == '':
+        return 0.0
+    
+    try:
+        return float(clean_str)
+    except ValueError:
+        print(f"Could not parse timestamp '{timestamp_str}', using 0.0")
+        return 0.0
+
+
 class VideoProcessingThread(QThread):
     """Thread for processing video in the background to avoid UI freezing"""
     progress_signal = pyqtSignal(int)
@@ -51,22 +79,16 @@ class VideoProcessingThread(QThread):
                 # Process image overlays
                 for image_path, timestamp in image_overlays:
                     if image_path and os.path.exists(image_path):
-                        try:
-                            time_value = float(timestamp) if timestamp else 0
-                            video = add_image_overlay(video, image_path, time_value)
-                        except ValueError:
-                            print(f"Invalid timestamp for image: {timestamp}")
+                        time_value = parse_timestamp(timestamp)
+                        video = add_image_overlay(video, image_path, time_value)
                 
                 self.progress_signal.emit(70)
                 
                 # Process text overlays
                 for text_content, timestamp in text_overlays:
                     if text_content:
-                        try:
-                            time_value = float(timestamp) if timestamp else 0
-                            video = add_text_overlay(video, text_content, time_value)
-                        except ValueError:
-                            print(f"Invalid timestamp for text: {timestamp}")
+                        time_value = parse_timestamp(timestamp)
+                        video = add_text_overlay(video, text_content, time_value)
                 
                 self.progress_signal.emit(90)
                 
