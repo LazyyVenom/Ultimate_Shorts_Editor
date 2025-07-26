@@ -132,10 +132,9 @@ def add_text_overlay(video: Union[VideoFileClip, CompositeVideoClip], text: str,
             print(f"Text at {start_time}s would appear after video ends.")
             return CompositeVideoClip([video])
         
-        text_clip = text_clip.with_position(('center', 'bottom')).with_start(start_time).with_duration(text_duration)
-        
-        fade_duration = min(0.5, text_duration / 4)
-        text_clip = text_clip.with_effects([vfx.FadeIn(fade_duration), vfx.FadeOut(fade_duration)])
+        # Position text at 30% from bottom (70% from top)
+        vertical_position = int(video.size[1] * 0.7)
+        text_clip = text_clip.with_position(('center', vertical_position)).with_start(start_time).with_duration(text_duration)
         
         result = CompositeVideoClip([video, text_clip])
         return result
