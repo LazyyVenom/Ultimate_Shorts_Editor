@@ -1,110 +1,171 @@
-# Ultimate Shorts Editor
+# Ultimate Shorts Editor 🎬
 
-A powerful PyQt5-based application for automating the editing of short-form videos with advanced features including automatic caption generation.
+A modern, component-based video editing application designed for creating short-form videos with advanced features like automated captions, overlays, and effects.
 
-## Features
+## ✨ Features
 
-### Core Video Editing
-
-- **Video Combination**: Merge multiple video clips seamlessly
-- **Audio Integration**: Add overlay audio and background music
-- **Image Overlays**: Add images with precise timing
-- **Text Overlays**: Add custom text with professional styling
-- **Thumbnail Generation**: Automatic thumbnail creation
-
-### Advanced Captioning
-
-- **Automatic Caption Generation**: Generate captions from audio using Faster-Whisper
-- **Word-by-Word Display**: Show captions one word at a time for better engagement
-- **Hinglish Support**: Optimized for Hindi-English mixed content
-- **Flexible Positioning**: Captions positioned at 70% height (30% from bottom)
+- **Automated Video Processing**: Combine multiple video sources seamlessly
+- **Advanced Caption Generation**: AI-powered Hinglish caption generation with word-by-word timing
+- **Dynamic Overlays**: Add images and text with precise timing and animations
+- **Audio Integration**: Layer multiple audio tracks with automatic mixing
+- **Professional Effects**: Color grading, transitions, and visual enhancements
+- **Batch Processing**: Headless mode for automated video generation
+- **Modern Architecture**: Clean, component-based design for easy maintenance and extension
 - **Custom Fonts**: Use custom font files for professional styling
 
 ### User Interface
 
 - **Intuitive PyQt5 GUI**: Easy-to-use interface with drag-and-drop support
 - **Real-time Preview**: Preview your edits before final rendering
-- **Batch Processing**: Process multiple videos efficiently
-- **Progress Tracking**: Visual progress indicators for all operations
 
-## Installation
+## 🏗️ Architecture Overview
 
-1. Clone the repository:
+The project has been completely reorganized into a modern, component-based architecture:
 
-```bash
-git clone https://github.com/LazyyVenom/Ultimate_Shorts_Editor.git
-cd Ultimate_Shorts_Editor
+```
+src/
+├── models/          # Data models and entities
+├── services/        # Business logic services
+├── processors/      # Specialized processing modules
+├── ui/             # User interface components
+└── app.py          # Main application orchestrator
 ```
 
-2. Create and activate virtual environment:
+**Key Benefits:**
 
-```bash
-python -m venv env
-source env/bin/activate  # On Windows: env\Scripts\activate
-```
+- **Separation of Concerns**: Clear boundaries between data, business logic, and UI
+- **Reusability**: Components can be used independently or in different combinations
+- **Testability**: Each component can be unit tested in isolation
+- **Maintainability**: Easy to understand, modify, and extend
+- **Type Safety**: Full type annotations for better IDE support and error catching
 
-3. Install dependencies:
+## 🚀 Quick Start
 
-```bash
-pip install -r requirements.txt
-```
-
-4. Run the application:
-
-```bash
-python app.py
-```
-
-## Requirements
+### Prerequisites
 
 - Python 3.7+
 - PyQt5
 - MoviePy 2.x
-- Faster-Whisper (for caption generation)
-- FFmpeg (for video processing)
+- FFmpeg
 
-## Usage
+### Installation
 
-1. **Launch the application**: Run `python app.py`
-2. **Select videos**: Choose primary and secondary video files
-3. **Add audio**: Upload overlay audio and background music
-4. **Configure captions**: Enable auto-captions and word-by-word display
-5. **Add overlays**: Insert images and text at specific timestamps
-6. **Process**: Click "Process Video" to generate the final output
+1. **Clone the repository**:
 
-## Project Structure
+   ```bash
+   git clone https://github.com/LazyyVenom/Ultimate_Shorts_Editor.git
+   cd Ultimate_Shorts_Editor
+   ```
 
+2. **Create and activate virtual environment**:
+
+   ```bash
+   python -m venv env
+   source env/bin/activate  # On Windows: env\Scripts\activate
+   ```
+
+3. **Install dependencies**:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+### Usage Options
+
+#### 1. GUI Mode (Recommended)
+
+```bash
+# New organized application
+python app_organized.py
+
+# Load existing project
+python app_organized.py --config my_project.use_project
 ```
-Ultimate_Shorts_Editor/
-├── app.py                    # Main application entry point
-├── ui/
-│   └── application.py        # PyQt5 user interface
-├── vid_editor/
-│   └── utils.py             # Core video processing utilities
-├── audio_opp/
-│   └── captioner.py         # Audio captioning with Faster-Whisper
-├── caption_integration.py    # Caption integration utilities
-├── static/
-│   ├── Utendo-Bold.ttf      # Custom font files
-│   └── Utendo-Regular.ttf
-└── requirements.txt         # Python dependencies
+
+#### 2. Headless Mode (Batch Processing)
+
+```bash
+python app_organized.py --headless --config project.use_project --output final_video.mp4
 ```
 
-## Contributing
+#### 3. Legacy Interface
+
+```bash
+# Original interface (still supported)
+python app.py
+```
+
+#### 4. Try the Demo
+
+```bash
+# Explore the new architecture
+python demo_organized.py
+```
+
+## 🎯 New Usage Examples
+
+### Simple Video Creation
+
+```python
+from src.app import UltimateShortEditorApplication
+
+# Create application
+app = UltimateShortEditorApplication()
+
+# Create project
+project = app.create_project("My Awesome Video")
+
+# Add media files
+app.add_media("input_video.mp4")
+app.add_media("background_music.mp3")
+
+# Add overlays
+app.add_text_overlay("Welcome!", start_time=0, duration=3)
+app.add_image_overlay("logo.png", start_time=5, duration=2)
+
+# Export video
+output_path = app.export_video()
+print(f"Video created: {output_path}")
+```
+
+## 📂 Legacy vs New Structure
+
+| Aspect                | Legacy               | New Organized                |
+| --------------------- | -------------------- | ---------------------------- |
+| **Entry Point**       | `app.py`             | `app_organized.py`           |
+| **Architecture**      | Procedural functions | Component-based OOP          |
+| **Code Organization** | Scattered in utils   | Organized in services/models |
+| **Testing**           | Difficult to test    | Easily testable components   |
+| **Reusability**       | Limited              | High reusability             |
+| **Type Safety**       | Minimal              | Full type annotations        |
+| **Error Handling**    | Basic                | Comprehensive validation     |
+| **Extensibility**     | Hard to extend       | Easy to add features         |
+
+## 📖 Documentation
+
+- **[Architecture Documentation](ARCHITECTURE.md)**: Detailed explanation of the new architecture
+- **Migration Guide**: How to migrate from legacy code
+- **Contributing Guidelines**: How to contribute to the project
+
+## 🤝 Contributing
 
 1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes following the new architecture patterns
+4. Add tests for new functionality
+5. Ensure code follows style guidelines
+6. Submit a pull request
 
-## License
+## 📄 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## Acknowledgments
+## 🙏 Acknowledgments
 
 - **MoviePy**: Video processing library
 - **Faster-Whisper**: Speech recognition for captions
 - **PyQt5**: GUI framework
 - **FFmpeg**: Multimedia processing
+
+---
+
+_Built with ❤️ for content creators who want professional results with minimal effort._
