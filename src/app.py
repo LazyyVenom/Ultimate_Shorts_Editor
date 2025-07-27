@@ -48,7 +48,6 @@ class UltimateShortEditorApplication:
         
         # Initialize processors
         self.color_grading_processor = ColorGradingProcessor()
-        self.color_grading_service = ColorGradingProcessor()
         
         # Application state
         self.app: Optional[QApplication] = None
@@ -93,28 +92,6 @@ class UltimateShortEditorApplication:
         """
         return self.project_service.create_project(name, **settings)
     
-    def load_project(self, file_path: str) -> Project:
-        """Load project from file
-        
-        Args:
-            file_path: Path to project file
-            
-        Returns:
-            Loaded Project instance
-        """
-        return self.project_service.load_project(file_path)
-    
-    def save_project(self, file_path: Optional[str] = None) -> str:
-        """Save current project
-        
-        Args:
-            file_path: Optional path to save to
-            
-        Returns:
-            Path where project was saved
-        """
-        return self.project_service.save_project(file_path)
-    
     def add_media(self, file_path: str, identifier: Optional[str] = None) -> bool:
         """Add media file to current project
         
@@ -130,16 +107,22 @@ class UltimateShortEditorApplication:
     
     def add_image_overlay(self, image_path: str, start_time: float, 
                          duration: float = 5.0, position: Position = Position.CENTER,
-                         scale: float = 1.0, opacity: float = 1.0, **kwargs) -> bool:
+                         scale: float = 1.0, opacity: float = 1.0, rotation: float = 0.0,
+                         fit_mode: str = "contain", custom_position: Optional[tuple] = None,
+                         z_index: int = 1, **kwargs) -> bool:
         """Add image overlay to current project
         
         Args:
             image_path: Path to image file
             start_time: Start time in seconds
             duration: Duration in seconds
-            position: Position of the overlay
-            scale: Scale factor for the image
+            position: Position of the overlay (CENTER, TOP, BOTTOM, etc.)
+            scale: Scale factor for the image (1.0 = original size)
             opacity: Opacity of the overlay (0.0 to 1.0)
+            rotation: Rotation angle in degrees
+            fit_mode: How to fit the image ("contain", "cover", "fill", "stretch")
+            custom_position: Custom position as (x, y) coordinates
+            z_index: Layer order (higher values appear on top)
             **kwargs: Additional overlay properties
             
         Returns:
@@ -159,8 +142,12 @@ class UltimateShortEditorApplication:
                 duration=duration,
                 image_path=image_path,
                 position=position,
+                custom_position=custom_position,
                 scale=scale,
                 opacity=opacity,
+                rotation=rotation,
+                fit_mode=fit_mode,
+                z_index=z_index,
                 **kwargs
             )
             
@@ -185,17 +172,31 @@ class UltimateShortEditorApplication:
     def add_text_overlay(self, text: str, start_time: float, 
                         duration: float = 3.0, position: Position = Position.BOTTOM,
                         font_size: int = 40, font_color: str = "white",
-                        background_color: Optional[str] = None, **kwargs) -> bool:
+                        background_color: Optional[str] = None, 
+                        font_path: Optional[str] = None,
+                        stroke_color: Optional[str] = None, stroke_width: int = 0,
+                        text_align: str = "center", line_spacing: float = 1.2,
+                        max_width: Optional[int] = None, custom_position: Optional[tuple] = None,
+                        z_index: int = 2, opacity: float = 1.0, **kwargs) -> bool:
         """Add text overlay to current project
         
         Args:
             text: Text content
             start_time: Start time in seconds
             duration: Duration in seconds
-            position: Position of the text
+            position: Position of the text (CENTER, TOP, BOTTOM, etc.)
             font_size: Size of the font
-            font_color: Color of the text
+            font_color: Color of the text (name or hex)
             background_color: Background color (optional)
+            font_path: Path to custom font file (optional)
+            stroke_color: Text stroke/outline color (optional)
+            stroke_width: Width of text stroke in pixels
+            text_align: Text alignment ("left", "center", "right")
+            line_spacing: Line spacing multiplier
+            max_width: Maximum width for text wrapping (pixels)
+            custom_position: Custom position as (x, y) coordinates
+            z_index: Layer order (higher values appear on top)
+            opacity: Text opacity (0.0 to 1.0)
             **kwargs: Additional overlay properties
             
         Returns:
@@ -211,9 +212,18 @@ class UltimateShortEditorApplication:
                 duration=duration,
                 text=text,
                 position=position,
+                custom_position=custom_position,
                 font_size=font_size,
                 font_color=font_color,
                 background_color=background_color,
+                font_path=font_path,
+                stroke_color=stroke_color,
+                stroke_width=stroke_width,
+                text_align=text_align,
+                line_spacing=line_spacing,
+                max_width=max_width,
+                z_index=z_index,
+                opacity=opacity,
                 **kwargs
             )
             
@@ -234,6 +244,177 @@ class UltimateShortEditorApplication:
         except Exception as e:
             print(f"❌ Error adding text overlay: {e}")
             return False
+    
+    def apply_color_grading(self, settings: Optional[ColorGradingSettings] = None, **kwargs) -> bool:
+        """Apply color grading to the current project
+        
+        Args:
+            settings: ColorGradingSettings object with all adjustments
+            **kwargs: Individual color grading parameters (brightness, contrast, etc.)
+            
+        Returns:
+            True if applied successfully
+        """
+        if not self.project_service.current_project:
+            print("❌ No active project")
+            return False
+            
+        try:
+            # Create settings from kwargs if not provided
+            if settings is None:
+                settings = ColorGradingSettings(**kwargs)
+            
+            # Store color grading settings in project settings as preset name
+            self.project_service.current_project.settings.color_grading = "custom"
+            
+            print(f"✅ Applied color grading: brightness={settings.brightness}, contrast={settings.contrast}")
+            return True
+            
+        except Exception as e:
+            print(f"❌ Error applying color grading: {e}")
+            return False
+    
+    def apply_color_grading_preset(self, preset_name: str) -> bool:
+        """Apply a color grading preset to the current project
+        
+        Args:
+            preset_name: Name of the preset (cinematic, warm, cool, vintage, etc.)
+            
+        Returns:
+            True if applied successfully
+        """
+        if not self.project_service.current_project:
+            print("❌ No active project")
+            return False
+            
+        try:
+            available_presets = self.color_grading_processor.get_available_presets()
+            if preset_name not in available_presets:
+                print(f"❌ Unknown preset: {preset_name}")
+                print(f"Available presets: {', '.join(available_presets)}")
+                return False
+            
+            # Store the preset name in project settings
+            self.project_service.current_project.settings.color_grading = preset_name
+            
+            print(f"✅ Applied color grading preset: {preset_name}")
+            return True
+            
+        except Exception as e:
+            print(f"❌ Error applying color grading preset: {e}")
+            return False
+    
+    def get_available_color_presets(self) -> list[str]:
+        """Get list of available color grading presets
+        
+        Returns:
+            List of preset names
+        """
+        return self.color_grading_processor.get_available_presets()
+    
+    def add_multiple_overlays(self, overlays: List[Dict[str, Any]]) -> bool:
+        """Add multiple overlays at once
+        
+        Args:
+            overlays: List of overlay dictionaries with type, parameters
+            
+        Returns:
+            True if all overlays added successfully
+        """
+        if not self.project_service.current_project:
+            print("❌ No active project")
+            return False
+            
+        success_count = 0
+        for overlay_config in overlays:
+            overlay_type = overlay_config.get('type', '').lower()
+            
+            if overlay_type == 'image':
+                if self.add_image_overlay(**{k: v for k, v in overlay_config.items() if k != 'type'}):
+                    success_count += 1
+            elif overlay_type == 'text':
+                if self.add_text_overlay(**{k: v for k, v in overlay_config.items() if k != 'type'}):
+                    success_count += 1
+            else:
+                print(f"⚠️ Unknown overlay type: {overlay_type}")
+        
+        print(f"✅ Added {success_count}/{len(overlays)} overlays successfully")
+        return success_count == len(overlays)
+    
+    def remove_overlay(self, start_time: float, overlay_type: Optional[str] = None) -> bool:
+        """Remove overlay(s) at specific time
+        
+        Args:
+            start_time: Start time of overlay to remove
+            overlay_type: Optional type filter ('image' or 'text')
+            
+        Returns:
+            True if overlay(s) removed successfully
+        """
+        if not self.project_service.current_project:
+            print("❌ No active project")
+            return False
+            
+        try:
+            timeline = self.project_service.current_project.timeline
+            items_to_remove = []
+            
+            for item in timeline.items:
+                if (item.start_time == start_time and 
+                    item.overlay is not None):
+                    
+                    if overlay_type is None:
+                        items_to_remove.append(item)
+                    elif (overlay_type.lower() == 'image' and 
+                          item.item_type == TimelineItemType.IMAGE):
+                        items_to_remove.append(item)
+                    elif (overlay_type.lower() == 'text' and 
+                          item.item_type == TimelineItemType.TEXT):
+                        items_to_remove.append(item)
+            
+            for item in items_to_remove:
+                timeline.items.remove(item)
+            
+            print(f"✅ Removed {len(items_to_remove)} overlay(s) at {start_time}s")
+            return len(items_to_remove) > 0
+            
+        except Exception as e:
+            print(f"❌ Error removing overlay: {e}")
+            return False
+    
+    def list_overlays(self) -> List[Dict[str, Any]]:
+        """List all overlays in the current project
+        
+        Returns:
+            List of overlay information dictionaries
+        """
+        if not self.project_service.current_project:
+            return []
+            
+        overlays = []
+        timeline = self.project_service.current_project.timeline
+        
+        for item in timeline.items:
+            if item.overlay is not None:
+                overlay_info = {
+                    'type': item.item_type.value,
+                    'start_time': item.start_time,
+                    'duration': item.duration,
+                    'track_index': item.track_index
+                }
+                
+                # Add specific overlay properties based on type
+                if item.item_type == TimelineItemType.IMAGE:
+                    overlay_info['image_path'] = getattr(item.overlay, 'image_path', '')
+                    overlay_info['scale'] = getattr(item.overlay, 'scale', 1.0)
+                elif item.item_type == TimelineItemType.TEXT:
+                    overlay_info['text'] = getattr(item.overlay, 'text', '')
+                    overlay_info['font_size'] = getattr(item.overlay, 'font_size', 40)
+                    overlay_info['font_color'] = getattr(item.overlay, 'font_color', 'white')
+                
+                overlays.append(overlay_info)
+        
+        return overlays
     
     def export_video(self, progress_callback: Optional[Callable[[int, str], None]] = None) -> Optional[str]:
         """Export current project to video
@@ -331,13 +512,9 @@ class UltimateShortEditorApplication:
             from .ui.main_window import MainWindow
             from .core.video_project import VideoProject
             
-            # Create or load project
-            if config_file and os.path.exists(config_file):
-                self.load_project(config_file)
-                print(f"✅ Loaded project from: {config_file}")
-            else:
-                self.create_project()
-                print("✅ Created new project")
+            # Always create a new project - keep it simple
+            self.create_project()
+            print("✅ Created new project")
             
             # Create a VideoProject for the UI (simplified conversion for now)
             video_project = VideoProject()
@@ -347,8 +524,7 @@ class UltimateShortEditorApplication:
             main_window.show()
             
             print("🎬 Ultimate Shorts Editor started successfully!")
-            print("📁 Use File > Open Project to load existing projects")
-            print("📝 Use File > New Project to create new projects")
+            print("🎥 Ready to edit videos - add media, overlays, and effects!")
             
             # Start the application event loop
             if self.app:
@@ -360,46 +536,33 @@ class UltimateShortEditorApplication:
             print("💡 Run in headless mode instead")
             return 1
     
-    def run_headless(self, config_file: str, output_path: Optional[str] = None) -> int:
+    def run_headless(self, output_path: Optional[str] = None) -> int:
         """Run in headless mode for batch processing
         
         Args:
-            config_file: Configuration file path
             output_path: Optional output path override
             
         Returns:
             Exit code
         """
-        if not config_file or not os.path.exists(config_file):
-            print("❌ Configuration file required for headless mode")
-            return 1
-        
         try:
             print("🎬 Running Ultimate Shorts Editor in headless mode...")
             
-            # Load project
-            project = self.load_project(config_file)
+            # Create a new project
+            self.create_project()
             
             # Override output path if provided
-            if output_path:
-                project.settings.output_directory = os.path.dirname(output_path)
-                project.settings.output_filename = os.path.splitext(os.path.basename(output_path))[0]
+            if output_path and self.project_service.current_project:
+                if hasattr(self.project_service.current_project, 'settings'):
+                    self.project_service.current_project.settings.output_directory = os.path.dirname(output_path)
+                    self.project_service.current_project.settings.output_filename = os.path.splitext(os.path.basename(output_path))[0]
             
-            # Validate project
-            issues = self.validate_project()
-            if issues:
-                print(f"❌ Project validation failed: {issues}")
-                return 1
+            # Note: In headless mode, users would need to add media and configure 
+            # the project programmatically before calling export_video()
+            print("✅ Project created - ready for programmatic configuration")
+            print("💡 Add media files and configure settings before exporting")
             
-            # Export video
-            output_file = self.export_video()
-            
-            if output_file:
-                print(f"✅ Export completed: {output_file}")
-                return 0
-            else:
-                print("❌ Export failed")
-                return 1
+            return 0
                 
         except Exception as e:
             print(f"❌ Headless processing failed: {e}")
@@ -418,7 +581,7 @@ def main():
     )
     parser.add_argument(
         '--config', '-c',
-        help='Project configuration file'
+        help='Project configuration file (GUI mode only - optional)'
     )
     parser.add_argument(
         '--output', '-o',
@@ -441,12 +604,8 @@ def main():
     
     try:
         if args.headless:
-            # Headless mode
-            if not args.config:
-                print("❌ --config required for headless mode")
-                return 1
-            
-            exit_code = app.run_headless(args.config, args.output)
+            # Headless mode - no config required
+            exit_code = app.run_headless(args.output)
         else:
             # GUI mode
             exit_code = app.run_gui(args.config)

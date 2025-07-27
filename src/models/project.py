@@ -113,9 +113,6 @@ class Project:
     timeline: Timeline = field(default_factory=Timeline)
     media_files: Dict[str, MediaFile] = field(default_factory=dict)
     
-    # File paths
-    project_file_path: Optional[str] = None
-    
     def add_media_file(self, file_path: str, media_type: MediaType, 
                       identifier: Optional[str] = None) -> MediaFile:
         """Add a media file to the project"""
@@ -219,33 +216,6 @@ class Project:
         
         return issues
     
-    def save(self, file_path: Optional[str] = None) -> str:
-        """Save project to file"""
-        if file_path:
-            self.project_file_path = file_path
-        elif not self.project_file_path:
-            # Generate default filename
-            safe_name = "".join(c for c in self.name if c.isalnum() or c in (' ', '-', '_')).rstrip()
-            self.project_file_path = f"{safe_name}.use_project"
-        
-        self.modified_at = datetime.now()
-        
-        project_data = self.to_dict()
-        with open(self.project_file_path, 'w', encoding='utf-8') as f:
-            json.dump(project_data, f, indent=2, default=str)
-        
-        return self.project_file_path
-    
-    @classmethod
-    def load(cls, file_path: str) -> 'Project':
-        """Load project from file"""
-        with open(file_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-        
-        project = cls.from_dict(data)
-        project.project_file_path = file_path
-        return project
-    
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary"""
         return {
@@ -258,30 +228,3 @@ class Project:
             'timeline': self.timeline.to_dict(),
             'media_files': {k: v.to_dict() for k, v in self.media_files.items()}
         }
-    
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'Project':
-        """Create from dictionary"""
-        project = cls(
-            name=data.get('name', 'Untitled Project'),
-            description=data.get('description', ''),
-            created_at=datetime.fromisoformat(data.get('created_at', datetime.now().isoformat())),
-            modified_at=datetime.fromisoformat(data.get('modified_at', datetime.now().isoformat())),
-            version=data.get('version', '1.0')
-        )
-        
-        # Load settings
-        if 'settings' in data:
-            project.settings = ProjectSettings.from_dict(data['settings'])
-        
-        # Load timeline
-        if 'timeline' in data:
-            project.timeline = Timeline.from_dict(data['timeline'])
-        
-        # Load media files
-        if 'media_files' in data:
-            for identifier, media_data in data['media_files'].items():
-                media_file = MediaFile.from_dict(media_data)
-                project.media_files[identifier] = media_file
-        
-        return project

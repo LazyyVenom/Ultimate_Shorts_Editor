@@ -53,38 +53,6 @@ class ProjectService:
         print(f"✅ Created new project: {name}")
         return self.current_project
     
-    def load_project(self, file_path: str) -> Project:
-        """Load project from file
-        
-        Args:
-            file_path: Path to project file
-            
-        Returns:
-            Loaded Project instance
-        """
-        if not os.path.exists(file_path):
-            raise FileNotFoundError(f"Project file not found: {file_path}")
-        
-        self.current_project = Project.load(file_path)
-        print(f"✅ Loaded project: {self.current_project.name}")
-        return self.current_project
-    
-    def save_project(self, file_path: Optional[str] = None) -> str:
-        """Save current project
-        
-        Args:
-            file_path: Optional path to save to
-            
-        Returns:
-            Path where project was saved
-        """
-        if not self.current_project:
-            raise ValueError("No project loaded")
-        
-        saved_path = self.current_project.save(file_path)
-        print(f"✅ Saved project to: {saved_path}")
-        return saved_path
-    
     def add_media_to_project(self, file_path: str, identifier: Optional[str] = None) -> Optional[MediaFile]:
         """Add media file to current project
         
