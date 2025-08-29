@@ -372,6 +372,7 @@ class MainWindow(QMainWindow):
             self.audio_label.setText(f"Processing: {file_name}...")
             self.audio_label.setStyleSheet("color: #F39C12; font-weight: bold;")
             self.play_btn.setEnabled(False)
+            self.timeline_slider.setEnabled(False)
             
             # Start processing in background thread
             self.processing_worker = AudioProcessingWorker(file_path)
