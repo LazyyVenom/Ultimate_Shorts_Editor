@@ -33,13 +33,6 @@ class MainWindow(QMainWindow):
         main_layout = QVBoxLayout(scroll_widget)
         main_layout.setSpacing(15)
         
-        # Title
-        title_label = QLabel("Ultimate Shorts Editor")
-        title_label.setFont(QFont("Arial", 18, QFont.Bold))
-        title_label.setAlignment(Qt.AlignCenter)
-        title_label.setStyleSheet("color: #2C3E50; padding: 10px;")
-        main_layout.addWidget(title_label)
-        
         # Row 1: Add Audio + Playback Controls
         audio_section = self.create_audio_section()
         main_layout.addWidget(audio_section)
@@ -358,30 +351,79 @@ class MainWindow(QMainWindow):
         row_layout.addWidget(path_label)
         
         # Start time
-        row_layout.addWidget(QLabel("Start:"))
+        start_label = QLabel("Start:")
+        start_label.setStyleSheet("color: #495057; font-weight: bold;")
+        row_layout.addWidget(start_label)
+        
         start_spin = QDoubleSpinBox()
         start_spin.setRange(0, 9999)
         start_spin.setValue(0)
         start_spin.setSingleStep(0.1)
         start_spin.setSuffix("s")
         start_spin.setMinimumWidth(80)
+        start_spin.setStyleSheet("""
+            QDoubleSpinBox {
+                background-color: white;
+                border: 1px solid #CED4DA;
+                border-radius: 3px;
+                padding: 3px;
+                color: #495057;
+            }
+            QDoubleSpinBox:focus {
+                border-color: #80BDFF;
+            }
+        """)
         row_layout.addWidget(start_spin)
         
         # End time
-        row_layout.addWidget(QLabel("End:"))
+        end_label = QLabel("End:")
+        end_label.setStyleSheet("color: #495057; font-weight: bold;")
+        row_layout.addWidget(end_label)
+        
         end_spin = QDoubleSpinBox()
         end_spin.setRange(0.1, 9999)
         end_spin.setValue(5.0)
         end_spin.setSingleStep(0.1)
         end_spin.setSuffix("s")
         end_spin.setMinimumWidth(80)
+        end_spin.setStyleSheet("""
+            QDoubleSpinBox {
+                background-color: white;
+                border: 1px solid #CED4DA;
+                border-radius: 3px;
+                padding: 3px;
+                color: #495057;
+            }
+            QDoubleSpinBox:focus {
+                border-color: #80BDFF;
+            }
+        """)
         row_layout.addWidget(end_spin)
         
-        # Position
-        row_layout.addWidget(QLabel("Position:"))
-        position_combo = QComboBox()
-        position_combo.addItems(["Center", "Top-Left", "Top-Right", "Bottom-Left", "Bottom-Right"])
-        row_layout.addWidget(position_combo)
+        # Padding
+        padding_label = QLabel("Padding:")
+        padding_label.setStyleSheet("color: #495057; font-weight: bold;")
+        row_layout.addWidget(padding_label)
+        
+        padding_spin = QDoubleSpinBox()
+        padding_spin.setRange(0, 50)  # 0% to 50% padding
+        padding_spin.setValue(10.0)  # Default 10% padding
+        padding_spin.setSingleStep(1.0)
+        padding_spin.setSuffix("%")
+        padding_spin.setMinimumWidth(80)
+        padding_spin.setStyleSheet("""
+            QDoubleSpinBox {
+                background-color: white;
+                border: 1px solid #CED4DA;
+                border-radius: 3px;
+                padding: 3px;
+                color: #495057;
+            }
+            QDoubleSpinBox:focus {
+                border-color: #80BDFF;
+            }
+        """)
+        row_layout.addWidget(padding_spin)
         
         # Remove button
         remove_btn = QPushButton("×")
@@ -395,7 +437,7 @@ class MainWindow(QMainWindow):
             'image_path': image_path,
             'start_spin': start_spin,
             'end_spin': end_spin,
-            'position_combo': position_combo,
+            'padding_spin': padding_spin,
             'row_frame': row_frame
         }
         self.image_overlays.append(overlay_data)
@@ -427,37 +469,77 @@ class MainWindow(QMainWindow):
         row_layout = QHBoxLayout(row_frame)
         
         # Text input
-        row_layout.addWidget(QLabel("📝 Text:"))
+        text_label = QLabel("📝 Text:")
+        text_label.setStyleSheet("color: #495057; font-weight: bold;")
+        row_layout.addWidget(text_label)
+        
         text_input = QLineEdit()
         text_input.setPlaceholderText("Enter text...")
         text_input.setMinimumWidth(150)
+        text_input.setStyleSheet("""
+            QLineEdit {
+                background-color: white;
+                border: 1px solid #CED4DA;
+                border-radius: 3px;
+                padding: 5px;
+                color: #495057;
+            }
+            QLineEdit:focus {
+                border-color: #80BDFF;
+                outline: 0;
+            }
+        """)
         row_layout.addWidget(text_input)
         
         # Start time
-        row_layout.addWidget(QLabel("Start:"))
+        start_label = QLabel("Start:")
+        start_label.setStyleSheet("color: #495057; font-weight: bold;")
+        row_layout.addWidget(start_label)
+        
         start_spin = QDoubleSpinBox()
         start_spin.setRange(0, 9999)
         start_spin.setValue(0)
         start_spin.setSingleStep(0.1)
         start_spin.setSuffix("s")
         start_spin.setMinimumWidth(80)
+        start_spin.setStyleSheet("""
+            QDoubleSpinBox {
+                background-color: white;
+                border: 1px solid #CED4DA;
+                border-radius: 3px;
+                padding: 3px;
+                color: #495057;
+            }
+            QDoubleSpinBox:focus {
+                border-color: #80BDFF;
+            }
+        """)
         row_layout.addWidget(start_spin)
         
         # End time
-        row_layout.addWidget(QLabel("End:"))
+        end_label = QLabel("End:")
+        end_label.setStyleSheet("color: #495057; font-weight: bold;")
+        row_layout.addWidget(end_label)
+        
         end_spin = QDoubleSpinBox()
         end_spin.setRange(0.1, 9999)
         end_spin.setValue(3.0)
         end_spin.setSingleStep(0.1)
         end_spin.setSuffix("s")
         end_spin.setMinimumWidth(80)
+        end_spin.setStyleSheet("""
+            QDoubleSpinBox {
+                background-color: white;
+                border: 1px solid #CED4DA;
+                border-radius: 3px;
+                padding: 3px;
+                color: #495057;
+            }
+            QDoubleSpinBox:focus {
+                border-color: #80BDFF;
+            }
+        """)
         row_layout.addWidget(end_spin)
-        
-        # Position
-        row_layout.addWidget(QLabel("Position:"))
-        position_combo = QComboBox()
-        position_combo.addItems(["Center", "Top", "Bottom", "Top-Left", "Top-Right", "Bottom-Left", "Bottom-Right"])
-        row_layout.addWidget(position_combo)
         
         # Remove button
         remove_btn = QPushButton("×")
@@ -471,7 +553,6 @@ class MainWindow(QMainWindow):
             'text_input': text_input,
             'start_spin': start_spin,
             'end_spin': end_spin,
-            'position_combo': position_combo,
             'row_frame': row_frame
         }
         self.text_overlays.append(overlay_data)
@@ -550,7 +631,7 @@ class MainWindow(QMainWindow):
                 'image_path': overlay['image_path'],
                 'start_time': overlay['start_spin'].value(),
                 'end_time': overlay['end_spin'].value(),
-                'position': overlay['position_combo'].currentText().lower().replace('-', '_')
+                'padding': overlay['padding_spin'].value()
             })
         return data
     
@@ -563,8 +644,7 @@ class MainWindow(QMainWindow):
                 data.append({
                     'text': text,
                     'start_time': overlay['start_spin'].value(),
-                    'end_time': overlay['end_spin'].value(),
-                    'position': overlay['position_combo'].currentText().lower().replace('-', '_')
+                    'end_time': overlay['end_spin'].value()
                 })
         return data
 
