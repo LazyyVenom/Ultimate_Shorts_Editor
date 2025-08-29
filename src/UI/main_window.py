@@ -29,7 +29,6 @@ class MainWindow(QMainWindow):
         scroll_area.setWidgetResizable(True)
         self.setCentralWidget(scroll_area)
         
-        # Main layout
         main_layout = QVBoxLayout(scroll_widget)
         main_layout.setSpacing(15)
         
