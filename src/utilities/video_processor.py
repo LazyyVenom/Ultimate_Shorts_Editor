@@ -60,6 +60,8 @@ def add_image_overlay(video: VideoFileClip, image_path: str, start_time: float, 
     return final_video
 
 
+
+
 if __name__ == "__main__":
     primary_video_path = "/Users/anubhavchoubey/Documents/Codes/Own_Projects/Ultimate_Shorts_Editor/testing_stuff/primary.mp4"
     secondary_video_path = "/Users/anubhavchoubey/Documents/Codes/Own_Projects/Ultimate_Shorts_Editor/testing_stuff/secondary.mp4"
