@@ -60,19 +60,95 @@ def process_audio(audio_file, seconds=0.05):
     text = f"Old Duration: {before:.3f} seconds \nNew Duration: {after:.3f} seconds"
     return output_audio_file, output_audio_file, text
 
+def add_image_overlay_with_animation(video, image_path: str, start_time: float, end_time: float, padding: int = 10):
+    """Add image overlay with smooth up/down animation like in video_processor.py"""
+    try:
+        if not os.path.exists(image_path):
+            print(f"Warning: Image file {image_path} not found")
+            return video
+            
+        video_width, video_height = video.size
+        
+        max_width = video_width * (1 - padding / 100)
+        max_height = video_height * (1 - padding / 100)
+        
+        image = ImageClip(image_path)
+        
+        img_width, img_height = image.size
+        scale_width = max_width / img_width
+        scale_height = max_height / img_height
+        scale = min(scale_width, scale_height)
+        
+        new_width = int(img_width * scale)
+        new_height = int(img_height * scale)
+        image = image.resized((new_width, new_height))
+        
+        duration = end_time - start_time
+        image = image.with_duration(duration).with_start(start_time)
+
+        center_x = (video_width - new_width) // 2
+        center_y = (video_height - new_height) // 2
+        bottom_y = video_height
+
+        transition_duration = min(0.5, duration / 3)
+
+        def position_function(t):
+            """Calculate position based on time with smooth animation"""
+            if t < transition_duration:
+                # Coming up from bottom
+                progress = t / transition_duration
+                progress = 1 - (1 - progress) ** 2  # Ease out
+                y = bottom_y - (bottom_y - center_y) * progress
+                return (center_x, y)
+            elif t > (duration - transition_duration):
+                # Going down to bottom
+                progress = (t - (duration - transition_duration)) / transition_duration
+                progress = progress ** 2  # Ease in
+                y = center_y + (bottom_y - center_y) * progress
+                return (center_x, y)
+            else:
+                # Stay in center
+                return (center_x, center_y)
+        
+        image = image.with_position(position_function)
+        
+        final_video = CompositeVideoClip([video, image])
+        print(f"Added animated image: {os.path.basename(image_path)}")
+        
+        return final_video
+        
+    except Exception as e:
+        print(f"Error in add_image_overlay_with_animation: {e}")
+        return video
+
 try:
-    from src.utilities.video_processor import VideoProcessor
-except ImportError:
-    print("Warning: VideoProcessor not available. Creating mock class.")
-    class VideoProcessor:
-        def process_video(self, *args, **kwargs):
-            return "Mock processing - VideoProcessor not available"
-        def get_video_info(self, path):
-            return {"duration": 10.0, "fps": 30, "size": (1920, 1080), "filename": os.path.basename(path)}
+    from src.utilities.video_processor import (
+        add_primary_secondary_videos, 
+        add_image_overlay, 
+        add_captions, 
+        add_heading, 
+        add_smaller_captions
+    )
+    from moviepy import VideoFileClip, AudioFileClip, ImageClip, CompositeVideoClip
+    VIDEO_PROCESSING_AVAILABLE = True
+except ImportError as e:
+    print(f"Warning: Video processing not available: {e}")
+    VIDEO_PROCESSING_AVAILABLE = False
+    
+    # Mock functions for when video processing is not available
+    def add_primary_secondary_videos(*args, **kwargs):
+        return None
+    def add_image_overlay(*args, **kwargs):
+        return None
+    def add_captions(*args, **kwargs):
+        return None
+    def add_heading(*args, **kwargs):
+        return None
+    def add_smaller_captions(*args, **kwargs):
+        return None
 
 class UltimateShortEditor:
     def __init__(self):
-        self.video_processor = VideoProcessor()
         self.audio_file = None
         self.primary_video = None
         self.secondary_video = None
@@ -80,6 +156,7 @@ class UltimateShortEditor:
         self.images_data = []
         self.texts_data = []
         self.processed_audio = None
+        self.auto_captions = None
         
     def process_audio_simple(self, audio_file, silence_seconds=0.05):
         """Process uploaded audio file with silence removal using working function"""
@@ -110,15 +187,43 @@ class UltimateShortEditor:
         """Add primary video"""
         if video_file is not None:
             self.primary_video = video_file
+            if VIDEO_PROCESSING_AVAILABLE:
+                try:
+                    video_clip = VideoFileClip(video_file)
+                    duration = video_clip.duration
+                    size = video_clip.size
+                    fps = video_clip.fps
+                    video_clip.close()
+                    return f"✅ Primary video loaded: {os.path.basename(video_file)}\nDuration: {duration:.1f}s, Size: {size[0]}x{size[1]}, FPS: {fps:.1f}"
+                except Exception as e:
+                    return f"⚠️ Video loaded but couldn't read info: {str(e)}"
+            return f"✅ Primary video loaded: {os.path.basename(video_file)}"
+        return "❌ No video file provided"
     
     def add_secondary_video(self, video_file):
         """Add secondary video"""
         if video_file is not None:
             self.secondary_video = video_file
+            if VIDEO_PROCESSING_AVAILABLE:
+                try:
+                    video_clip = VideoFileClip(video_file)
+                    duration = video_clip.duration
+                    size = video_clip.size
+                    fps = video_clip.fps
+                    video_clip.close()
+                    return f"✅ Secondary video loaded: {os.path.basename(video_file)}\nDuration: {duration:.1f}s, Size: {size[0]}x{size[1]}, FPS: {fps:.1f}"
+                except Exception as e:
+                    return f"⚠️ Video loaded but couldn't read info: {str(e)}"
+            return f"✅ Secondary video loaded: {os.path.basename(video_file)}"
+        return "❌ No video file provided"
     
     def update_heading(self, heading_text):
         """Update heading text"""
         self.heading_text = heading_text
+        if heading_text.strip():
+            return f"✅ Heading updated: '{heading_text[:50]}...'" if len(heading_text) > 50 else f"✅ Heading updated: '{heading_text}'"
+        else:
+            return "❌ Heading cleared"
     
     def add_image(self, image_file, start_time, end_time):
         """Add image with timing"""
@@ -184,40 +289,183 @@ class UltimateShortEditor:
         
         return display_text
     
-    def generate_final_video(self):
-        """Generate the final video with all components"""
+    def generate_auto_captions(self):
+        """Generate automatic captions and auto-generate video if ready"""
         try:
+            if not self.processed_audio:
+                return "❌ No processed audio available. Please process audio first.", "", None, "❌ No audio for captions"
+            
+            # Try to import caption processor
+            try:
+                from src.utilities.caption_processor import GenerateCaptions
+            except ImportError:
+                return "❌ Caption generation not available. Install required dependencies.", "", None, "❌ Caption generation failed"
+            
+            print("Generating auto captions...")
+            caption_generator = GenerateCaptions(model_size="medium", device="cpu")
+            caption_data = caption_generator.generate(self.processed_audio)
+            
+            self.auto_captions = caption_data
+            
+            # Create preview text
+            preview_text = "Generated Captions:\n\n"
+            for i, (text, start_time) in enumerate(zip(caption_data['captions'][:20], caption_data['start_times'][:20])):
+                preview_text += f"{start_time:.1f}s: {text}\n"
+            
+            if len(caption_data['captions']) > 20:
+                preview_text += f"\n... and {len(caption_data['captions']) - 20} more captions"
+            
+            status_text = f"✅ Generated {len(caption_data['captions'])} captions successfully!"
+            
+            # Auto-generate video if ready
+            video_output, generation_status = self.auto_generate_if_ready()
+            
+            return status_text, preview_text, video_output, generation_status
+            
+        except Exception as e:
+            print(f"Caption generation error: {e}")
+            return f"❌ Error generating captions: {str(e)}", "", None, "❌ Caption generation failed"
+    
+    def clear_auto_captions(self):
+        """Clear generated auto captions and auto-generate if ready"""
+        self.auto_captions = None
+        
+        # Auto-generate video if ready
+        video_output, generation_status = self.auto_generate_if_ready()
+        
+        return "✅ Auto captions cleared", "", video_output, generation_status
+    
+    def generate_final_video_simple(self):
+        """Generate final video using the simple step-by-step method with auto captions"""
+        try:
+            if not VIDEO_PROCESSING_AVAILABLE:
+                return None, "❌ Error: Video processing libraries not available"
+            
             if not self.primary_video:
-                return None, "Error: No primary video added"
+                return None, "❌ Error: No primary video uploaded"
             
-            # Prepare video files
-            video_files = [self.primary_video]
+            if not self.processed_audio:
+                return None, "❌ Error: No processed audio available. Please process audio first."
+            
+            print("Starting video generation...")
+            
+            # Step 1: Auto-generate captions first
+            print("Auto-generating captions...")
+            try:
+                from src.utilities.caption_processor import GenerateCaptions
+                caption_generator = GenerateCaptions(model_size="medium", device="cpu")
+                self.auto_captions = caption_generator.generate(self.processed_audio)
+                print(f"Generated {len(self.auto_captions['captions'])} captions")
+            except Exception as e:
+                print(f"Caption generation failed: {e}")
+                self.auto_captions = None
+            
+            # Load clips like in the working video_processor.py example
+            primary_video = VideoFileClip(self.primary_video)
+            audio_clip = AudioFileClip(self.processed_audio)
+            audio_duration = audio_clip.duration
+            
+            print(f"Audio duration: {audio_duration:.2f} seconds")
+            
+            # Step 2: Combine primary and secondary videos
             if self.secondary_video:
-                video_files.append(self.secondary_video)
+                print("Combining primary and secondary videos...")
+                secondary_video = VideoFileClip(self.secondary_video)
+                final_clip = add_primary_secondary_videos(primary_video, secondary_video, audio_duration)
+            else:
+                print("Using primary video only...")
+                final_clip = add_primary_secondary_videos(primary_video, primary_video, audio_duration)
             
-            # Prepare image overlays
-            image_overlays = []
-            for img_data in self.images_data:
-                image_overlays.append({
-                    'image_path': img_data['path'],
-                    'start_time': img_data['start_time'],
-                    'duration': img_data['duration'],
-                    'position': 'center'
-                })
+            # Step 3: Add audio
+            print("Adding audio...")
+            final_clip = final_clip.with_audio(audio_clip)
             
-            # Generate output
+            # Step 4: Add heading if provided
+            if self.heading_text.strip():
+                print("Adding heading...")
+                final_clip = add_heading(
+                    final_clip,
+                    text=self.heading_text,
+                    font_size=65,
+                    color="white",
+                    padding_top=30,
+                    padding_side=20
+                )
+            
+            # Step 5: Add image overlays with animation
+            if self.images_data:
+                print(f"Adding {len(self.images_data)} image overlays...")
+                for img_data in self.images_data:
+                    try:
+                        final_clip = add_image_overlay_with_animation(
+                            final_clip, 
+                            img_data['path'], 
+                            start_time=img_data['start_time'], 
+                            end_time=img_data['end_time'], 
+                            padding=10
+                        )
+                        print(f"Added image: {os.path.basename(img_data['path'])}")
+                    except Exception as e:
+                        print(f"Error adding image {img_data['path']}: {e}")
+            
+            # Step 6: Add auto captions if generated
+            if self.auto_captions:
+                print("Adding auto captions...")
+                try:
+                    final_clip = add_captions(
+                        final_clip,
+                        texts=self.auto_captions['captions'],
+                        start_times=self.auto_captions['start_times'],
+                        durations=self.auto_captions['durations'],
+                        color="white"
+                    )
+                except Exception as e:
+                    print(f"Error adding auto captions: {e}")
+            
+            # Step 7: Add text overlays (smaller captions)
+            if self.texts_data:
+                print(f"Adding {len(self.texts_data)} text overlays...")
+                try:
+                    texts = [txt['content'] for txt in self.texts_data]
+                    start_times = [txt['start_time'] for txt in self.texts_data]
+                    end_times = [txt['end_time'] for txt in self.texts_data]
+                    
+                    final_clip = add_smaller_captions(
+                        final_clip,
+                        texts=texts,
+                        start_times=start_times,
+                        end_times=end_times,
+                        font_size=38,
+                        text_color="white",
+                        bg_color="black",
+                        bg_opacity=0.7,
+                        padding_bottom=55,
+                        padding_horizontal=35,
+                        bg_padding=12,
+                    )
+                except Exception as e:
+                    print(f"Error adding text overlays: {e}")
+            
+            # Step 8: Export video
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             output_filename = f"ultimate_short_{timestamp}.mp4"
             output_path = os.path.join("output_videos", output_filename)
             
             os.makedirs("output_videos", exist_ok=True)
             
-            self.video_processor.process_video(video_files, image_overlays, output_path)
+            print(f"Exporting video to: {output_path}")
             
-            return output_path, f"✅ Video saved: {output_filename}"
+            # Use the same export method as the working video_processor.py
+            final_clip.write_videofile(output_path, codec="libx264", audio_codec="aac")
+            
+            print("Video generation completed!")
+            return output_path, f"✅ Video successfully created: {output_filename}\n✅ Auto-captions included: {len(self.auto_captions['captions']) if self.auto_captions else 0} captions"
             
         except Exception as e:
-            return None, f"❌ Error: {str(e)}"
+            print(f"Error during video generation: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return None, f"❌ Error generating video: {str(e)}"
 
 # Initialize the editor
 editor = UltimateShortEditor()
@@ -227,6 +475,7 @@ def create_gradio_interface():
     with gr.Blocks(title="Ultimate Shorts Editor", theme=gr.themes.Soft()) as app:
         gr.Markdown("# 🎬 Ultimate Shorts Editor")
         gr.Markdown("Create amazing short videos with audio, videos, images, and text overlays!")
+        gr.Markdown("**📝 Note:** Captions will be automatically generated when you click 'Generate Video'.")
         
         # Row 1: Audio
         with gr.Row():
@@ -260,11 +509,13 @@ def create_gradio_interface():
                 gr.Markdown("### Primary Video")
                 primary_video_input = gr.Video(label="Upload Primary Video", height=250)
                 primary_video_btn = gr.Button("Add Primary Video", variant="primary")
+                primary_video_status = gr.Textbox(label="Primary Video Status", interactive=False, lines=2)
             
             with gr.Column():
                 gr.Markdown("### Secondary Video")
                 secondary_video_input = gr.Video(label="Upload Secondary Video", height=250)
                 secondary_video_btn = gr.Button("Add Secondary Video", variant="secondary")
+                secondary_video_status = gr.Textbox(label="Secondary Video Status", interactive=False, lines=2)
         
         # Row 3: Heading
         with gr.Row():
@@ -272,6 +523,7 @@ def create_gradio_interface():
                 gr.Markdown("## 📝 Heading")
                 heading_input = gr.Textbox(label="Video Heading", placeholder="Enter heading...", lines=2)
                 heading_btn = gr.Button("Update Heading", variant="primary")
+                heading_status = gr.Textbox(label="Heading Status", interactive=False)
         
         # Row 4: Images
         with gr.Row():
@@ -316,12 +568,13 @@ def create_gradio_interface():
         # Row 6: Generate Video
         with gr.Row():
             with gr.Column():
-                gr.Markdown("## 🚀 Generate")
+                gr.Markdown("## 🚀 Generate Video")
+                gr.Markdown("*Captions will be automatically generated during video creation*")
                 
                 generate_btn = gr.Button("🎬 Generate Final Video", variant="primary", size="lg")
                 
                 final_video_output = gr.Video(label="Generated Video", height=400)
-                generation_status = gr.Textbox(label="Status", interactive=False)
+                generation_status = gr.Textbox(label="Generation Status", interactive=False)
         
         # Event handlers
         
@@ -335,18 +588,21 @@ def create_gradio_interface():
         # Video handling
         primary_video_btn.click(
             fn=editor.add_primary_video,
-            inputs=[primary_video_input]
+            inputs=[primary_video_input],
+            outputs=[primary_video_status]
         )
         
         secondary_video_btn.click(
             fn=editor.add_secondary_video,
-            inputs=[secondary_video_input]
+            inputs=[secondary_video_input],
+            outputs=[secondary_video_status]
         )
         
         # Heading
         heading_btn.click(
             fn=editor.update_heading,
-            inputs=[heading_input]
+            inputs=[heading_input],
+            outputs=[heading_status]
         )
         
         # Images
@@ -377,7 +633,7 @@ def create_gradio_interface():
         
         # Final video generation
         generate_btn.click(
-            fn=editor.generate_final_video,
+            fn=editor.generate_final_video_simple,
             inputs=[],
             outputs=[final_video_output, generation_status]
         )

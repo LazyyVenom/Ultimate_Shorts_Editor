@@ -5,12 +5,63 @@ import random
 import numpy as np
     
 def add_primary_secondary_videos(primary_video: VideoFileClip, secondary_video: VideoFileClip, audio_duration: float) -> VideoFileClip:
-    start_clip = primary_video.subclipped(0, 4)
-    middle_clip_duration = audio_duration * random.uniform(0.3, 0.4)
-    middle_clip = secondary_video.subclipped(0, middle_clip_duration)
-    end_clip = primary_video.subclipped(4, audio_duration - middle_clip_duration)
-    final_clip = concatenate_videoclips([start_clip, middle_clip, end_clip])
-    return final_clip
+    """Combine primary and secondary videos with improved stability"""
+    try:
+        # Ensure we don't exceed available video durations
+        primary_duration = primary_video.duration
+        secondary_duration = secondary_video.duration
+        
+        print(f"Primary video duration: {primary_duration:.2f}s")
+        print(f"Secondary video duration: {secondary_duration:.2f}s")
+        print(f"Required audio duration: {audio_duration:.2f}s")
+        
+        # Use a simpler approach - just switch between videos at logical points
+        if primary_duration >= audio_duration:
+            # Primary video is long enough, just use it
+            return primary_video.subclipped(0, audio_duration)
+        
+        # Create segments with better bounds checking
+        segments = []
+        current_time = 0
+        
+        # Start with primary video (first 4 seconds or available duration)
+        start_duration = min(4, primary_duration, audio_duration)
+        if start_duration > 0:
+            segments.append(primary_video.subclipped(0, start_duration))
+            current_time += start_duration
+        
+        # Fill remaining time with secondary video if available
+        if current_time < audio_duration and secondary_duration > 0:
+            remaining_duration = audio_duration - current_time
+            secondary_clip_duration = min(remaining_duration, secondary_duration)
+            if secondary_clip_duration > 0:
+                segments.append(secondary_video.subclipped(0, secondary_clip_duration))
+                current_time += secondary_clip_duration
+        
+        # If we still need more time and have more primary video, use it
+        if current_time < audio_duration and primary_duration > start_duration:
+            remaining_duration = audio_duration - current_time
+            available_primary = primary_duration - start_duration
+            final_clip_duration = min(remaining_duration, available_primary)
+            if final_clip_duration > 0:
+                segments.append(primary_video.subclipped(start_duration, start_duration + final_clip_duration))
+        
+        # Concatenate segments if we have more than one
+        if len(segments) > 1:
+            return concatenate_videoclips(segments)
+        elif len(segments) == 1:
+            return segments[0]
+        else:
+            # Fallback to primary video
+            return primary_video.subclipped(0, min(primary_duration, audio_duration))
+            
+    except Exception as e:
+        print(f"Error in add_primary_secondary_videos: {e}")
+        # Fallback to just primary video
+        try:
+            return primary_video.subclipped(0, min(primary_video.duration, audio_duration))
+        except:
+            return primary_video
 
 
 def add_image_overlay(video: VideoFileClip, image_path: str, start_time: float, end_time: float, padding: int = 5) -> VideoFileClip:
@@ -69,26 +120,59 @@ def add_captions(
     color: str = "white",
     font: str = "/Users/anubhavchoubey/Documents/Codes/Own_Projects/Ultimate_Shorts_Editor/static/Utendo-Regular.ttf",
 ) -> CompositeVideoClip:
-    clips = [video]
-    for text, start_time, duration in zip(texts, start_times, durations):
-        text_clip = TextClip(
-            font=font,
-            text=text,
-            font_size=font_size,
-            color=color,
-            method="caption",
-            size=video.size,
-            duration=duration,
-            text_align="center",
-            # margin=(None, None, None, 120),
-            stroke_color="black",
-            stroke_width=15,
-            vertical_align="center",
-        ).with_start(start_time)
-        clips.append(text_clip)
+    """Add captions with better error handling"""
+    try:
+        clips = [video]
+        
+        # Validate font file
+        if not os.path.exists(font):
+            print(f"Warning: Font file {font} not found, using default")
+            font = None
+        
+        for text, start_time, duration in zip(texts, start_times, durations):
+            try:
+                # Validate inputs
+                if not text or not text.strip():
+                    continue
+                if duration <= 0:
+                    continue
+                if start_time < 0:
+                    start_time = 0
+                
+                # Create text clip with error handling
+                text_clip_params = {
+                    "text": text.strip(),
+                    "font_size": max(10, font_size),
+                    "color": color,
+                    "method": "caption",
+                    "size": video.size,
+                    "duration": duration,
+                    "text_align": "center",
+                    "stroke_color": "black",
+                    "stroke_width": 15,
+                    "vertical_align": "center",
+                }
+                
+                if font:
+                    text_clip_params["font"] = font
+                
+                text_clip = TextClip(**text_clip_params).with_start(start_time)
+                clips.append(text_clip)
+                
+            except Exception as e:
+                print(f"Error creating caption '{text[:20]}...': {e}")
+                continue
 
-    video_with_text = CompositeVideoClip(clips)
-    return video_with_text
+        if len(clips) == 1:
+            # No captions were added successfully
+            return video
+            
+        video_with_text = CompositeVideoClip(clips)
+        return video_with_text
+        
+    except Exception as e:
+        print(f"Error in add_captions: {e}")
+        return video
 
 def add_heading(
     video,
@@ -103,36 +187,60 @@ def add_heading(
     stroke_width: int = 8,
 ) -> CompositeVideoClip:
     """
-    Add a static heading text to the video.
+    Add a static heading text to the video with error handling.
     """
-    video_width, video_height = video.size
-    
-    # Calculate maximum text width
-    max_text_width = int(video_width * max_width_ratio - 2 * padding_side)
-    
-    # Create text clip with automatic line wrapping
-    heading_clip = TextClip(
-        font=font,
-        text=text,
-        font_size=font_size,
-        color=color,
-        method="caption",
-        size=(max_text_width, None),  # Let height be automatic
-        text_align="center",
-        stroke_color=stroke_color,
-        stroke_width=stroke_width,
-    ).with_duration(video.duration)
-    
-    # Position the heading at the top center with padding
-    x_position = (video_width - heading_clip.w) // 2
-    y_position = padding_top
-    
-    heading_clip = heading_clip.with_position((x_position, y_position))
-    
-    # Combine video and heading
-    video_with_heading = CompositeVideoClip([video, heading_clip])
-    
-    return video_with_heading
+    try:
+        if not text or not text.strip():
+            print("Warning: Empty heading text")
+            return video
+            
+        video_width, video_height = video.size
+        
+        # Validate font file
+        if not os.path.exists(font):
+            print(f"Warning: Font file {font} not found, using default")
+            font = None
+        
+        # Calculate maximum text width
+        max_text_width = int(video_width * max_width_ratio - 2 * padding_side)
+        if max_text_width <= 0:
+            max_text_width = video_width // 2
+        
+        # Create text clip with automatic line wrapping
+        heading_params = {
+            "text": text.strip(),
+            "font_size": max(10, font_size),
+            "color": color,
+            "method": "caption",
+            "size": (max_text_width, None),  # Let height be automatic
+            "text_align": "center",
+            "stroke_color": stroke_color,
+            "stroke_width": max(0, stroke_width),
+        }
+        
+        if font:
+            heading_params["font"] = font
+            
+        heading_clip = TextClip(**heading_params).with_duration(video.duration)
+        
+        # Position the heading at the top center with padding
+        x_position = max(0, (video_width - heading_clip.w) // 2)
+        y_position = max(0, padding_top)
+        
+        # Ensure heading doesn't go off screen
+        if y_position + heading_clip.h > video_height:
+            y_position = max(0, video_height - heading_clip.h)
+        
+        heading_clip = heading_clip.with_position((x_position, y_position))
+        
+        # Combine with video
+        final_video = CompositeVideoClip([video, heading_clip])
+        return final_video
+        
+    except Exception as e:
+        print(f"Error in add_heading: {e}")
+        return video
+
 
 def add_smaller_captions(
     video,
@@ -148,55 +256,93 @@ def add_smaller_captions(
     padding_horizontal: int = 40,
     bg_padding: int = 15,
 ) -> CompositeVideoClip:
-    video_width, video_height = video.size
-    clips = [video]
-    
-    for text, start_time, end_time in zip(texts, start_times, end_times):
-        duration = end_time - start_time
+    """Add smaller captions with background at bottom of video with error handling"""
+    try:
+        video_width, video_height = video.size
+        clips = [video]
         
-        if duration <= 0:
-            continue
+        # Validate font file
+        if not os.path.exists(font):
+            print(f"Warning: Font file {font} not found, using default")
+            font = None
         
-        max_text_width = video_width - (2 * padding_horizontal)
+        for text, start_time, end_time in zip(texts, start_times, end_times):
+            try:
+                duration = end_time - start_time
+                
+                if duration <= 0 or not text or not text.strip():
+                    continue
+                
+                if start_time < 0:
+                    start_time = 0
+                
+                max_text_width = max(100, video_width - (2 * padding_horizontal))
+                
+                # Create text clip with error handling
+                text_params = {
+                    "text": text.strip(),
+                    "font_size": max(10, font_size),
+                    "color": text_color,
+                    "method": "caption",
+                    "size": (max_text_width, None),
+                    "text_align": "center",
+                }
+                
+                if font:
+                    text_params["font"] = font
+                
+                text_clip = TextClip(**text_params).with_duration(duration).with_start(start_time)
+                
+                # Calculate background dimensions
+                text_width, text_height = text_clip.size
+                bg_width = text_width + (2 * bg_padding)
+                bg_height = text_height + (2 * bg_padding)
+                
+                # Create background clip (semi-transparent rectangle)
+                try:
+                    bg_color_rgb = _hex_to_rgb(bg_color)
+                    bg_array = np.full((bg_height, bg_width, 3), bg_color_rgb, dtype=np.uint8)
+                    
+                    bg_clip = (ImageClip(bg_array)
+                              .with_duration(duration)
+                              .with_start(start_time)
+                              .with_opacity(max(0.1, min(1.0, bg_opacity))))
+                    
+                    # Position background at bottom center
+                    bg_x = max(0, (video_width - bg_width) // 2)
+                    bg_y = max(0, video_height - padding_bottom - bg_height)
+                    bg_clip = bg_clip.with_position((bg_x, bg_y))
+                    
+                    # Position text on top of background
+                    text_x = max(0, (video_width - text_width) // 2)
+                    text_y = max(0, video_height - padding_bottom - bg_height + bg_padding)
+                    text_clip = text_clip.with_position((text_x, text_y))
+                    
+                    # Add both background and text to clips
+                    clips.append(bg_clip)
+                    clips.append(text_clip)
+                    
+                except Exception as e:
+                    print(f"Error creating background for caption '{text[:20]}...': {e}")
+                    # Add just the text without background
+                    text_x = max(0, (video_width - text_clip.w) // 2)
+                    text_y = max(0, video_height - padding_bottom - text_clip.h)
+                    text_clip = text_clip.with_position((text_x, text_y))
+                    clips.append(text_clip)
+                    
+            except Exception as e:
+                print(f"Error adding smaller caption '{text[:20]}...': {e}")
+                continue
         
-        text_clip = TextClip(
-            font=font,
-            text=text,
-            font_size=font_size,
-            color=text_color,
-            method="caption",
-            size=(max_text_width, None),
-            text_align="center",
-        ).with_duration(duration).with_start(start_time)
+        if len(clips) == 1:
+            # No captions were added successfully
+            return video
+            
+        return CompositeVideoClip(clips)
         
-        # Calculate background dimensions
-        text_width, text_height = text_clip.size
-        bg_width = text_width + (2 * bg_padding)
-        bg_height = text_height + (2 * bg_padding)
-        
-        # Create background clip (semi-transparent rectangle)
-        bg_clip = (ImageClip(np.full((bg_height, bg_width, 3), 
-                                   [int(c) for c in _hex_to_rgb(bg_color)], 
-                                   dtype=np.uint8))
-                  .with_duration(duration)
-                  .with_start(start_time)
-                  .with_opacity(bg_opacity))
-        
-        # Position background at bottom center
-        bg_x = (video_width - bg_width) // 2
-        bg_y = video_height - padding_bottom - bg_height
-        bg_clip = bg_clip.with_position((bg_x, bg_y))
-        
-        # Position text on top of background
-        text_x = (video_width - text_width) // 2
-        text_y = video_height - padding_bottom - bg_height + bg_padding
-        text_clip = text_clip.with_position((text_x, text_y))
-        
-        # Add both background and text to clips
-        clips.append(bg_clip)
-        clips.append(text_clip)
-    
-    return CompositeVideoClip(clips)
+    except Exception as e:
+        print(f"Error in add_smaller_captions: {e}")
+        return video
 
 
 def _hex_to_rgb(hex_color: str) -> tuple:
