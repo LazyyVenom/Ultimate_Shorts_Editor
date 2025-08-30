@@ -9,6 +9,57 @@ from datetime import datetime
 # Add src to path for imports
 sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
 
+# Import audio processing functions directly
+import uuid
+from pydub import AudioSegment
+from pydub.silence import split_on_silence
+import re 
+
+def clean_file_name(file_path):
+    # Get the base file name and extension
+    file_name = os.path.basename(file_path)
+    file_name, file_extension = os.path.splitext(file_name)
+
+    # Replace non-alphanumeric characters with an underscore
+    cleaned = re.sub(r'[^a-zA-Z\d]+', '_', file_name)
+
+    # Remove any multiple underscores
+    clean_file_name = re.sub(r'_+', '_', cleaned).strip('_')
+
+    # Generate a random UUID for uniqueness
+    random_uuid = uuid.uuid4().hex[:6]
+
+    # Combine cleaned file name with the original extension
+    clean_file_path = os.path.join(os.path.dirname(file_path), clean_file_name + f"_{random_uuid}" + file_extension)
+
+    return clean_file_path
+
+def remove_silence(file_path, minimum_silence=50):
+    sound = AudioSegment.from_file(file_path)  # auto-detects format
+    audio_chunks = split_on_silence(sound,
+                                    min_silence_len=100,
+                                    silence_thresh=-45,
+                                    keep_silence=minimum_silence) 
+    combined = AudioSegment.empty()
+    for chunk in audio_chunks:
+        combined += chunk
+    output_path = clean_file_name(file_path)        
+    combined.export(output_path)  # format inferred from output file extension
+    return output_path
+
+def calculate_duration(file_path):
+    audio = AudioSegment.from_file(file_path)
+    duration_seconds = len(audio) / 1000.0  # pydub uses milliseconds
+    return duration_seconds
+
+def process_audio(audio_file, seconds=0.05):
+    keep_silence = int(seconds * 1000)
+    output_audio_file = remove_silence(audio_file, minimum_silence=keep_silence)
+    before = calculate_duration(audio_file)
+    after = calculate_duration(output_audio_file)
+    text = f"Old Duration: {before:.3f} seconds \nNew Duration: {after:.3f} seconds"
+    return output_audio_file, output_audio_file, text
+
 try:
     from src.utilities.video_processor import VideoProcessor
 except ImportError:
@@ -30,14 +81,30 @@ class UltimateShortEditor:
         self.texts_data = []
         self.processed_audio = None
         
-    def process_audio(self, audio_file):
-        """Process uploaded audio file"""
+    def process_audio_simple(self, audio_file, silence_seconds=0.05):
+        """Process uploaded audio file with silence removal using working function"""
         if audio_file is None:
-            return None
+            return None, None, "No audio file uploaded"
         
-        self.audio_file = audio_file
-        self.processed_audio = audio_file
-        return audio_file
+        try:
+            print(f"Processing audio: {audio_file}")
+            print(f"Keep silence: {silence_seconds}s")
+            
+            # Use the working process_audio function
+            output_file, download_file, duration_text = process_audio(audio_file, silence_seconds)
+            
+            self.processed_audio = output_file
+            self.audio_file = audio_file
+            
+            print(f"Processed audio saved to: {self.processed_audio}")
+            
+            return self.processed_audio, download_file, duration_text
+            
+        except Exception as e:
+            print(f"Audio processing error: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return None, None, f"❌ Error processing audio: {str(e)}"
     
     def add_primary_video(self, video_file):
         """Add primary video"""
@@ -166,8 +233,23 @@ def create_gradio_interface():
             with gr.Column():
                 gr.Markdown("## 🎵 Audio")
                 audio_input = gr.Audio(label="Upload Audio", type="filepath")
-                audio_process_btn = gr.Button("Process Audio", variant="primary")
-                processed_audio_player = gr.Audio(label="Processed Audio", interactive=False)
+                
+                silence_seconds = gr.Number(
+                    label="Keep Silence Upto (In seconds)", 
+                    value=0.05, 
+                    minimum=0, 
+                    maximum=1, 
+                    step=0.01
+                )
+                audio_process_btn = gr.Button("🔧 Remove Silence", variant="primary")
+                
+                processed_audio_player = gr.Audio(label="Play Audio", interactive=False)
+                audio_download = gr.File(label="Download Audio File")
+                audio_duration = gr.Textbox(
+                    label="Duration", 
+                    interactive=False, 
+                    lines=2
+                )
         
         # Row 2: Videos
         with gr.Row():
@@ -245,9 +327,9 @@ def create_gradio_interface():
         
         # Audio processing
         audio_process_btn.click(
-            fn=editor.process_audio,
-            inputs=[audio_input],
-            outputs=[processed_audio_player]
+            fn=editor.process_audio_simple,
+            inputs=[audio_input, silence_seconds],
+            outputs=[processed_audio_player, audio_download, audio_duration]
         )
         
         # Video handling
