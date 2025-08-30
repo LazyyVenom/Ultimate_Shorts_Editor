@@ -1,130 +1,35 @@
-from moviepy.editor import VideoFileClip, CompositeVideoClip, ImageClip, concatenate_videoclips
+from moviepy import VideoFileClip, CompositeVideoClip, ImageClip, concatenate_videoclips, AudioFileClip
 import os
+import random
 
-class VideoProcessor:
-    def __init__(self):
-        pass
     
-    def process_video(self, video_files, image_overlays, output_path):
-        """
-        Process videos by concatenating them and adding image overlays
-        
-        Args:
-            video_files (list): List of video file paths to concatenate
-            image_overlays (list): List of image overlay data dictionaries
-            output_path (str): Output file path
-        """
-        try:
-            # Load and concatenate video clips
-            video_clips = []
-            total_duration = 0
-            
-            print("Loading video files...")
-            for video_file in video_files:
-                if os.path.exists(video_file):
-                    clip = VideoFileClip(video_file)
-                    video_clips.append(clip)
-                    total_duration += clip.duration
-                    print(f"Loaded: {os.path.basename(video_file)} - Duration: {clip.duration:.2f}s")
-                else:
-                    print(f"Warning: File not found - {video_file}")
-            
-            if not video_clips:
-                raise ValueError("No valid video files found!")
-            
-            # Concatenate all video clips
-            print("Concatenating videos...")
-            final_video = concatenate_videoclips(video_clips, method="compose")
-            
-            # Add image overlays if any
-            if image_overlays:
-                print("Adding image overlays...")
-                clips_to_composite = [final_video]
-                
-                for overlay in image_overlays:
-                    if os.path.exists(overlay['image_path']):
-                        # Create image clip
-                        img_clip = ImageClip(overlay['image_path'])
-                        img_clip = img_clip.set_duration(overlay['duration'])
-                        img_clip = img_clip.set_start(overlay['start_time'])
-                        
-                        # Set position based on overlay settings
-                        position = self.get_position_coordinates(overlay['position'], final_video.size, img_clip.size)
-                        img_clip = img_clip.set_position(position)
-                        
-                        clips_to_composite.append(img_clip)
-                        print(f"Added overlay: {os.path.basename(overlay['image_path'])} at {overlay['start_time']}s for {overlay['duration']}s")
-                    else:
-                        print(f"Warning: Image file not found - {overlay['image_path']}")
-                
-                # Composite all clips
-                final_video = CompositeVideoClip(clips_to_composite)
-            
-            # Write the final video
-            print(f"Writing output video to: {output_path}")
-            final_video.write_videofile(
-                output_path,
-                codec='libx264',
-                audio_codec='aac',
-                temp_audiofile='temp-audio.m4a',
-                remove_temp=True
-            )
-            
-            # Close clips to free memory
-            for clip in video_clips:
-                clip.close()
-            final_video.close()
-            
-            print("Video processing completed successfully!")
-            
-        except Exception as e:
-            print(f"Error during video processing: {str(e)}")
-            raise e
+def add_primary_secondary_videos(primary_video: VideoFileClip, secondary_video: VideoFileClip, audio_duration: float) -> VideoFileClip:
+    # Dividing Primary video into two parts
+    total_duration = 4
+    start_clip = primary_video.subclipped(0, 4)
+    middle_clip_duration = audio_duration * random.uniform(0.3, 0.4)
+    total_duration += middle_clip_duration
+    total_duration += audio_duration - middle_clip_duration
+    print("Total Duration: ", total_duration)
+    print("Audio Duration: ", audio_duration)
+    middle_clip = secondary_video.subclipped(0, middle_clip_duration)
+
+    end_clip = primary_video.subclipped(4, audio_duration - middle_clip_duration)
+    final_clip = concatenate_videoclips([start_clip, middle_clip, end_clip])
+    return final_clip
+
+
+if __name__ == "__main__":
+    primary_video_path = "sample_data/videos/primary.mp4"
+    secondary_video_path = "sample_data/videos/secondary.mp4"
+    audio_path = "testing_stuff/New Recording-enhanced-v2.wav"
+
+    primary_video = VideoFileClip(primary_video_path)
+    secondary_video = VideoFileClip(secondary_video_path)
+    audio_clip = AudioFileClip(audio_path)
+    audio_duration = audio_clip.duration
     
-    def get_position_coordinates(self, position, video_size, image_size):
-        """
-        Convert position string to coordinates
-        
-        Args:
-            position (str): Position name (center, top-left, etc.)
-            video_size (tuple): (width, height) of video
-            image_size (tuple): (width, height) of image
-            
-        Returns:
-            tuple or str: Position coordinates or position string
-        """
-        video_width, video_height = video_size
-        img_width, img_height = image_size
-        
-        positions = {
-            'center': 'center',
-            'top-left': (0, 0),
-            'top-right': (video_width - img_width, 0),
-            'bottom-left': (0, video_height - img_height),
-            'bottom-right': (video_width - img_width, video_height - img_height)
-        }
-        
-        return positions.get(position, 'center')
-    
-    def get_video_info(self, video_path):
-        """
-        Get basic information about a video file
-        
-        Args:
-            video_path (str): Path to video file
-            
-        Returns:
-            dict: Video information
-        """
-        try:
-            clip = VideoFileClip(video_path)
-            info = {
-                'duration': clip.duration,
-                'fps': clip.fps,
-                'size': clip.size,
-                'filename': os.path.basename(video_path)
-            }
-            clip.close()
-            return info
-        except Exception as e:
-            return {'error': str(e)}
+    final_clip = add_primary_secondary_videos(primary_video, secondary_video, audio_duration)
+    final_clip = final_clip.set_audio(audio_clip)
+    output_path = "output/final_video.mp4"
+    final_clip.write_videofile(output_path, codec="libx264", audio_codec="aac")
