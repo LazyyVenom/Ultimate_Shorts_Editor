@@ -1,7 +1,7 @@
-from moviepy import VideoFileClip, CompositeVideoClip, ImageClip, concatenate_videoclips, AudioFileClip
+from moviepy import VideoFileClip, CompositeVideoClip, ImageClip, concatenate_videoclips, AudioFileClip, TextClip
+from typing import List
 import os
 import random
-
     
 def add_primary_secondary_videos(primary_video: VideoFileClip, secondary_video: VideoFileClip, audio_duration: float) -> VideoFileClip:
     start_clip = primary_video.subclipped(0, 4)
@@ -59,6 +59,35 @@ def add_image_overlay(video: VideoFileClip, image_path: str, start_time: float, 
     
     return final_video
 
+def add_captions(
+    video,
+    texts: List[str],
+    start_times: List[float],
+    durations: List[float],
+    font_size: int = 60,
+    color: str = "white",
+    font: str = "/Users/anubhavchoubey/Documents/Codes/Own_Projects/Ultimate_Shorts_Editor/static/Utendo-Regular.ttf",
+) -> CompositeVideoClip:
+    clips = [video]
+    for text, start_time, duration in zip(texts, start_times, durations):
+        text_clip = TextClip(
+            font=font,
+            text=text,
+            font_size=font_size,
+            color=color,
+            method="caption",
+            size=video.size,
+            duration=duration,
+            text_align="center",
+            # margin=(None, None, None, 120),
+            stroke_color="black",
+            stroke_width=15,
+            vertical_align="center",
+        ).with_start(start_time)
+        clips.append(text_clip)
+
+    video_with_text = CompositeVideoClip(clips)
+    return video_with_text
 
 
 
@@ -78,5 +107,27 @@ if __name__ == "__main__":
     image_path = "/Users/anubhavchoubey/Documents/Codes/Own_Projects/Ultimate_Shorts_Editor/testing_stuff/img1.jpeg"
     final_clip = add_image_overlay(final_clip, image_path, start_time=2, end_time=audio_duration - 8, padding=10)
 
-    output_path = "/Users/anubhavchoubey/Documents/Codes/Own_Projects/Ultimate_Shorts_Editor/testing_stuff/final_video.mp4"
+    # from caption_processor import GenerateCaptions
+    # print("Generating captions...")
+    # caption_generator = GenerateCaptions(model_size="medium", device="cpu")
+    # caption_data = caption_generator.generate(audio_path)
+    
+    # print(f"Generated {len(caption_data['captions'])} captions")
+    # print("Sample caption data:", {
+    #     'captions': caption_data['captions'][:5],
+    #     'start_times': caption_data['start_times'][:5],
+    #     'durations': caption_data['durations'][:5]
+    # })
+    
+    # print("Adding captions to video...")
+    # final_clip = add_captions(
+    #     final_clip,
+    #     texts=caption_data['captions'],
+    #     start_times=caption_data['start_times'],
+    #     durations=caption_data['durations'],
+    #     color="white"
+    # )
+
+    output_path = "/Users/anubhavchoubey/Documents/Codes/Own_Projects/Ultimate_Shorts_Editor/testing_stuff/final_video_with_captions.mp4"
+    print(f"Writing final video with captions to: {output_path}")
     final_clip.write_videofile(output_path, codec="libx264", audio_codec="aac")
