@@ -33,44 +33,30 @@ class UltimateShortEditor:
     def process_audio(self, audio_file):
         """Process uploaded audio file"""
         if audio_file is None:
-            return None, "No audio file uploaded"
+            return None
         
         self.audio_file = audio_file
-        # In a real implementation, you would process the audio here
-        # For now, we'll just return the same file
         self.processed_audio = audio_file
-        return audio_file, f"Audio processed: {os.path.basename(audio_file)}"
+        return audio_file
     
     def add_primary_video(self, video_file):
         """Add primary video"""
-        if video_file is None:
-            return "No video file uploaded"
-        
-        self.primary_video = video_file
-        info = self.video_processor.get_video_info(video_file)
-        return f"Primary video added: {info.get('filename', 'Unknown')} - Duration: {info.get('duration', 0):.2f}s"
+        if video_file is not None:
+            self.primary_video = video_file
     
     def add_secondary_video(self, video_file):
         """Add secondary video"""
-        if video_file is None:
-            return "No video file uploaded"
-        
-        self.secondary_video = video_file
-        info = self.video_processor.get_video_info(video_file)
-        return f"Secondary video added: {info.get('filename', 'Unknown')} - Duration: {info.get('duration', 0):.2f}s"
+        if video_file is not None:
+            self.secondary_video = video_file
     
     def update_heading(self, heading_text):
         """Update heading text"""
         self.heading_text = heading_text
-        return f"Heading updated: '{heading_text}'"
     
     def add_image(self, image_file, start_time, end_time):
         """Add image with timing"""
-        if image_file is None:
-            return self.get_images_display(), "No image file uploaded"
-        
-        if start_time >= end_time:
-            return self.get_images_display(), "Start time must be less than end time"
+        if image_file is None or start_time >= end_time:
+            return self.get_images_display()
         
         image_data = {
             'id': len(self.images_data),
@@ -81,12 +67,12 @@ class UltimateShortEditor:
         }
         
         self.images_data.append(image_data)
-        return self.get_images_display(), f"Image added: {os.path.basename(image_file)} ({start_time}s - {end_time}s)"
+        return self.get_images_display()
     
     def remove_image(self, image_id):
         """Remove image by ID"""
         self.images_data = [img for img in self.images_data if img['id'] != image_id]
-        return self.get_images_display(), f"Image {image_id} removed"
+        return self.get_images_display()
     
     def get_images_display(self):
         """Get formatted display of all images"""
@@ -101,11 +87,8 @@ class UltimateShortEditor:
     
     def add_text(self, text_content, start_time, end_time):
         """Add text with timing"""
-        if not text_content.strip():
-            return self.get_texts_display(), "Text content cannot be empty"
-        
-        if start_time >= end_time:
-            return self.get_texts_display(), "Start time must be less than end time"
+        if not text_content.strip() or start_time >= end_time:
+            return self.get_texts_display()
         
         text_data = {
             'id': len(self.texts_data),
@@ -116,12 +99,12 @@ class UltimateShortEditor:
         }
         
         self.texts_data.append(text_data)
-        return self.get_texts_display(), f"Text added: '{text_content[:30]}...' ({start_time}s - {end_time}s)"
+        return self.get_texts_display()
     
     def remove_text(self, text_id):
         """Remove text by ID"""
         self.texts_data = [txt for txt in self.texts_data if txt['id'] != text_id]
-        return self.get_texts_display(), f"Text {text_id} removed"
+        return self.get_texts_display()
     
     def get_texts_display(self):
         """Get formatted display of all texts"""
@@ -137,11 +120,10 @@ class UltimateShortEditor:
     def generate_final_video(self):
         """Generate the final video with all components"""
         try:
-            # Validate inputs
             if not self.primary_video:
                 return None, "Error: No primary video added"
             
-            # Prepare video files list
+            # Prepare video files
             video_files = [self.primary_video]
             if self.secondary_video:
                 video_files.append(self.secondary_video)
@@ -153,24 +135,22 @@ class UltimateShortEditor:
                     'image_path': img_data['path'],
                     'start_time': img_data['start_time'],
                     'duration': img_data['duration'],
-                    'position': 'center'  # Default position
+                    'position': 'center'
                 })
             
-            # Generate output filename
+            # Generate output
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             output_filename = f"ultimate_short_{timestamp}.mp4"
             output_path = os.path.join("output_videos", output_filename)
             
-            # Create output directory if it doesn't exist
             os.makedirs("output_videos", exist_ok=True)
             
-            # Process video
             self.video_processor.process_video(video_files, image_overlays, output_path)
             
-            return output_path, f"Video generated successfully: {output_filename}"
+            return output_path, f"✅ Video saved: {output_filename}"
             
         except Exception as e:
-            return None, f"Error generating video: {str(e)}"
+            return None, f"❌ Error: {str(e)}"
 
 # Initialize the editor
 editor = UltimateShortEditor()
@@ -181,195 +161,85 @@ def create_gradio_interface():
         gr.Markdown("# 🎬 Ultimate Shorts Editor")
         gr.Markdown("Create amazing short videos with audio, videos, images, and text overlays!")
         
-        # Row 1: Add Audio
+        # Row 1: Audio
         with gr.Row():
             with gr.Column():
-                gr.Markdown("## 🎵 Row 1: Audio Processing")
-                with gr.Row():
-                    audio_input = gr.Audio(
-                        label="Upload Audio File",
-                        type="filepath",
-                        show_download_button=True
-                    )
-                    audio_process_btn = gr.Button("Process Audio", variant="primary")
-                
-                with gr.Row():
-                    processed_audio_player = gr.Audio(
-                        label="Processed Audio (Playable with Timeline)",
-                        interactive=False,
-                        show_download_button=True
-                    )
-                
-                audio_status = gr.Textbox(
-                    label="Audio Status",
-                    interactive=False,
-                    placeholder="Upload and process audio to see status here"
-                )
+                gr.Markdown("## 🎵 Audio")
+                audio_input = gr.Audio(label="Upload Audio", type="filepath")
+                audio_process_btn = gr.Button("Process Audio", variant="primary")
+                processed_audio_player = gr.Audio(label="Processed Audio", interactive=False)
         
-        # Row 2: Add Videos (Two Columns)
+        # Row 2: Videos
         with gr.Row():
-            gr.Markdown("## 🎥 Row 2: Video Files")
+            gr.Markdown("## 🎥 Videos")
         
         with gr.Row():
             with gr.Column():
                 gr.Markdown("### Primary Video")
-                primary_video_input = gr.Video(
-                    label="Upload Primary Video",
-                    height=300
-                )
+                primary_video_input = gr.Video(label="Upload Primary Video", height=250)
                 primary_video_btn = gr.Button("Add Primary Video", variant="primary")
-                primary_video_status = gr.Textbox(
-                    label="Primary Video Status",
-                    interactive=False,
-                    placeholder="Upload primary video to see info here"
-                )
             
             with gr.Column():
                 gr.Markdown("### Secondary Video")
-                secondary_video_input = gr.Video(
-                    label="Upload Secondary Video",
-                    height=300
-                )
+                secondary_video_input = gr.Video(label="Upload Secondary Video", height=250)
                 secondary_video_btn = gr.Button("Add Secondary Video", variant="secondary")
-                secondary_video_status = gr.Textbox(
-                    label="Secondary Video Status",
-                    interactive=False,
-                    placeholder="Upload secondary video to see info here"
-                )
         
-        # Row 3: Add Heading
+        # Row 3: Heading
         with gr.Row():
             with gr.Column():
-                gr.Markdown("## 📝 Row 3: Heading")
-                heading_input = gr.Textbox(
-                    label="Video Heading",
-                    placeholder="Enter your video heading here...",
-                    lines=2
-                )
+                gr.Markdown("## 📝 Heading")
+                heading_input = gr.Textbox(label="Video Heading", placeholder="Enter heading...", lines=2)
                 heading_btn = gr.Button("Update Heading", variant="primary")
-                heading_status = gr.Textbox(
-                    label="Heading Status",
-                    interactive=False,
-                    placeholder="Enter heading to see status here"
-                )
         
-        # Row 4: Add Images with scrollable interface
+        # Row 4: Images
         with gr.Row():
             with gr.Column():
-                gr.Markdown("## 🖼️ Row 4: Image Overlays")
+                gr.Markdown("## 🖼️ Images")
                 
                 with gr.Row():
                     with gr.Column(scale=3):
-                        image_input = gr.Image(
-                            label="Upload Image",
-                            type="filepath",
-                            height=200
-                        )
+                        image_input = gr.Image(label="Upload Image", type="filepath", height=200)
                     with gr.Column(scale=2):
                         with gr.Row():
-                            image_start_time = gr.Number(
-                                label="Start Time (seconds)",
-                                value=0,
-                                minimum=0
-                            )
-                            image_end_time = gr.Number(
-                                label="End Time (seconds)",
-                                value=5,
-                                minimum=0
-                            )
+                            image_start_time = gr.Number(label="Start (seconds)", value=0, minimum=0)
+                            image_end_time = gr.Number(label="End (seconds)", value=5, minimum=0)
                         image_add_btn = gr.Button("➕ Add Image", variant="primary")
                 
-                with gr.Row():
-                    images_display = gr.Markdown(
-                        "No images added yet",
-                        label="Added Images"
-                    )
+                images_display = gr.Markdown("No images added")
                 
                 with gr.Row():
-                    image_remove_id = gr.Number(
-                        label="Remove Image ID",
-                        value=0,
-                        minimum=0,
-                        step=1
-                    )
-                    image_remove_btn = gr.Button("🗑️ Remove Image", variant="stop")
-                
-                image_status = gr.Textbox(
-                    label="Image Status",
-                    interactive=False,
-                    placeholder="Add images to see status here"
-                )
+                    image_remove_id = gr.Number(label="Remove ID", value=0, minimum=0, step=1)
+                    image_remove_btn = gr.Button("🗑️ Remove", variant="stop")
         
-        # Row 5: Add Text with similar interface to images
+        # Row 5: Text
         with gr.Row():
             with gr.Column():
-                gr.Markdown("## 📄 Row 5: Text Overlays")
+                gr.Markdown("## 📄 Text")
                 
                 with gr.Row():
                     with gr.Column(scale=3):
-                        text_input = gr.Textbox(
-                            label="Text Content",
-                            placeholder="Enter text to overlay on video...",
-                            lines=3
-                        )
+                        text_input = gr.Textbox(label="Text Content", placeholder="Enter text...", lines=3)
                     with gr.Column(scale=2):
                         with gr.Row():
-                            text_start_time = gr.Number(
-                                label="Start Time (seconds)",
-                                value=0,
-                                minimum=0
-                            )
-                            text_end_time = gr.Number(
-                                label="End Time (seconds)",
-                                value=3,
-                                minimum=0
-                            )
+                            text_start_time = gr.Number(label="Start (seconds)", value=0, minimum=0)
+                            text_end_time = gr.Number(label="End (seconds)", value=3, minimum=0)
                         text_add_btn = gr.Button("➕ Add Text", variant="primary")
                 
-                with gr.Row():
-                    texts_display = gr.Markdown(
-                        "No texts added yet",
-                        label="Added Texts"
-                    )
+                texts_display = gr.Markdown("No texts added")
                 
                 with gr.Row():
-                    text_remove_id = gr.Number(
-                        label="Remove Text ID",
-                        value=0,
-                        minimum=0,
-                        step=1
-                    )
-                    text_remove_btn = gr.Button("🗑️ Remove Text", variant="stop")
-                
-                text_status = gr.Textbox(
-                    label="Text Status",
-                    interactive=False,
-                    placeholder="Add texts to see status here"
-                )
+                    text_remove_id = gr.Number(label="Remove ID", value=0, minimum=0, step=1)
+                    text_remove_btn = gr.Button("🗑️ Remove", variant="stop")
         
-        # Row 6: Generate and Save Final Video
+        # Row 6: Generate Video
         with gr.Row():
             with gr.Column():
-                gr.Markdown("## 🎬 Row 6: Generate Final Video")
+                gr.Markdown("## 🚀 Generate")
                 
-                generate_btn = gr.Button(
-                    "🚀 Generate and Save Final Video",
-                    variant="primary",
-                    size="lg"
-                )
+                generate_btn = gr.Button("🎬 Generate Final Video", variant="primary", size="lg")
                 
-                with gr.Row():
-                    final_video_output = gr.Video(
-                        label="Generated Video",
-                        height=400,
-                        show_download_button=True
-                    )
-                
-                generation_status = gr.Textbox(
-                    label="Generation Status",
-                    interactive=False,
-                    placeholder="Click generate to create your final video"
-                )
+                final_video_output = gr.Video(label="Generated Video", height=400)
+                generation_status = gr.Textbox(label="Status", interactive=False)
         
         # Event handlers
         
@@ -377,53 +247,50 @@ def create_gradio_interface():
         audio_process_btn.click(
             fn=editor.process_audio,
             inputs=[audio_input],
-            outputs=[processed_audio_player, audio_status]
+            outputs=[processed_audio_player]
         )
         
         # Video handling
         primary_video_btn.click(
             fn=editor.add_primary_video,
-            inputs=[primary_video_input],
-            outputs=[primary_video_status]
+            inputs=[primary_video_input]
         )
         
         secondary_video_btn.click(
             fn=editor.add_secondary_video,
-            inputs=[secondary_video_input],
-            outputs=[secondary_video_status]
+            inputs=[secondary_video_input]
         )
         
         # Heading
         heading_btn.click(
             fn=editor.update_heading,
-            inputs=[heading_input],
-            outputs=[heading_status]
+            inputs=[heading_input]
         )
         
         # Images
         image_add_btn.click(
             fn=editor.add_image,
             inputs=[image_input, image_start_time, image_end_time],
-            outputs=[images_display, image_status]
+            outputs=[images_display]
         )
         
         image_remove_btn.click(
             fn=editor.remove_image,
             inputs=[image_remove_id],
-            outputs=[images_display, image_status]
+            outputs=[images_display]
         )
         
         # Texts
         text_add_btn.click(
             fn=editor.add_text,
             inputs=[text_input, text_start_time, text_end_time],
-            outputs=[texts_display, text_status]
+            outputs=[texts_display]
         )
         
         text_remove_btn.click(
             fn=editor.remove_text,
             inputs=[text_remove_id],
-            outputs=[texts_display, text_status]
+            outputs=[texts_display]
         )
         
         # Final video generation
