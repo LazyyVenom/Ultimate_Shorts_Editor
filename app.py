@@ -158,6 +158,82 @@ class UltimateShortEditor:
         self.processed_audio = None
         self.auto_captions = None
         
+    def add_bgm_to_audio(self, main_audio_clip, bgm_path=None, bgm_volume=0.15):
+        """Add background music to the main audio clip"""
+        if bgm_path is None:
+            # Use absolute path to ensure BGM file is found
+            bgm_path = os.path.join(os.path.dirname(__file__), "testing_stuff", "that-s-the-one-ryan-mccaffrey-go-by-ocean_qpn2Lcne.wav")
+        
+        try:
+            print(f"Looking for BGM file at: {bgm_path}")
+            if os.path.exists(bgm_path):
+                print(f"Adding BGM from: {bgm_path}")
+                bgm_clip = AudioFileClip(bgm_path)
+                
+                # Loop BGM to match main audio duration
+                main_duration = main_audio_clip.duration
+                if bgm_clip.duration < main_duration:
+                    # Calculate how many loops needed
+                    loops_needed = int(main_duration / bgm_clip.duration) + 1
+                    bgm_clips = [bgm_clip] * loops_needed
+                    
+                    # Use concatenate_audioclips to loop the BGM
+                    try:
+                        from moviepy import concatenate_audioclips
+                        bgm_clip = concatenate_audioclips(bgm_clips)
+                    except ImportError:
+                        try:
+                            from moviepy.audio.tools.cuts import concatenate_audioclips
+                            bgm_clip = concatenate_audioclips(bgm_clips)
+                        except ImportError:
+                            # Fallback: just use the original clip without looping
+                            print("Warning: Could not loop BGM, using original length")
+                            pass
+                
+                # Trim BGM to match main audio duration exactly
+                bgm_clip = bgm_clip.subclipped(0, main_duration)
+                
+                # Reduce BGM volume and mix with main audio
+                try:
+                    # Manual volume adjustment using audio transformation
+                    def adjust_volume(clip, volume_factor):
+                        """Manually adjust volume by scaling audio data"""
+                        return clip.transform(lambda gf, t: volume_factor * gf(t))
+                    
+                    bgm_clip = adjust_volume(bgm_clip, bgm_volume)
+                    main_audio_clip = adjust_volume(main_audio_clip, 0.8)
+                    print(f"Volume adjusted using manual scaling")
+                    
+                except Exception as volume_error:
+                    print(f"Volume adjustment failed: {volume_error}")
+                    print("Continuing with original audio volumes")
+                
+                # Mix the audio clips
+                try:
+                    # Try to import CompositeAudioClip
+                    try:
+                        from moviepy import CompositeAudioClip
+                        mixed_audio = CompositeAudioClip([main_audio_clip, bgm_clip])
+                        print(f"BGM mixed successfully using CompositeAudioClip")
+                    except ImportError:
+                        # Fallback: use simple addition if composite not available
+                        mixed_audio = main_audio_clip + bgm_clip
+                        print(f"BGM mixed using simple addition fallback")
+                    
+                except Exception as mix_error:
+                    print(f"BGM mixing failed: {mix_error}")
+                    print("Returning original audio without BGM")
+                    return main_audio_clip
+                
+                return mixed_audio
+            else:
+                print(f"BGM file not found: {bgm_path}, using original audio")
+                return main_audio_clip
+                
+        except Exception as e:
+            print(f"Error adding BGM: {e}")
+            return main_audio_clip
+        
     def process_audio_simple(self, audio_file, silence_seconds=0.05):
         """Process uploaded audio file with silence removal using working function"""
         if audio_file is None:
@@ -367,18 +443,88 @@ class UltimateShortEditor:
             
             print(f"Audio duration: {audio_duration:.2f} seconds")
             
-            # Step 2: Combine primary and secondary videos
+            # Step 2: Combine primary and secondary videos in sequence
             if self.secondary_video:
-                print("Combining primary and secondary videos...")
+                print("Combining primary and secondary videos in sequence...")
                 secondary_video = VideoFileClip(self.secondary_video)
-                final_clip = add_primary_secondary_videos(primary_video, secondary_video, audio_duration)
+                
+                # Calculate timing for video sequence
+                primary_start_duration = 6.0  # First 6 seconds of primary video
+                remaining_time = audio_duration - primary_start_duration
+                secondary_duration = remaining_time * 0.45  # 40-50% of remaining time
+                primary_end_duration = remaining_time - secondary_duration  # Rest for primary
+                
+                print(f"Video sequence: Primary({primary_start_duration}s) → Secondary({secondary_duration:.1f}s) → Primary({primary_end_duration:.1f}s)")
+                
+                # Create video segments
+                primary_start = primary_video.subclipped(0, min(primary_start_duration, primary_video.duration))
+                if primary_start.duration < primary_start_duration:
+                    # Loop primary if it's shorter than 6 seconds
+                    loops_needed = int(primary_start_duration / primary_video.duration) + 1
+                    primary_clips = [primary_video] * loops_needed
+                    try:
+                        from moviepy import concatenate_videoclips
+                        looped_primary = concatenate_videoclips(primary_clips)
+                        primary_start = looped_primary.subclipped(0, primary_start_duration)
+                    except ImportError:
+                        primary_start = primary_video.subclipped(0, min(primary_start_duration, primary_video.duration))
+                
+                # Secondary video segment
+                secondary_segment = secondary_video.subclipped(0, min(secondary_duration, secondary_video.duration))
+                if secondary_segment.duration < secondary_duration:
+                    # Loop secondary if needed
+                    loops_needed = int(secondary_duration / secondary_video.duration) + 1
+                    secondary_clips = [secondary_video] * loops_needed
+                    try:
+                        from moviepy import concatenate_videoclips
+                        looped_secondary = concatenate_videoclips(secondary_clips)
+                        secondary_segment = looped_secondary.subclipped(0, secondary_duration)
+                    except ImportError:
+                        secondary_segment = secondary_video.subclipped(0, min(secondary_duration, secondary_video.duration))
+                
+                # Primary end segment
+                primary_end = primary_video.subclipped(0, min(primary_end_duration, primary_video.duration))
+                if primary_end.duration < primary_end_duration:
+                    # Loop primary if needed
+                    loops_needed = int(primary_end_duration / primary_video.duration) + 1
+                    primary_clips = [primary_video] * loops_needed
+                    try:
+                        from moviepy import concatenate_videoclips
+                        looped_primary = concatenate_videoclips(primary_clips)
+                        primary_end = looped_primary.subclipped(0, primary_end_duration)
+                    except ImportError:
+                        primary_end = primary_video.subclipped(0, min(primary_end_duration, primary_video.duration))
+                
+                # Concatenate all segments
+                try:
+                    from moviepy import concatenate_videoclips
+                    final_clip = concatenate_videoclips([primary_start, secondary_segment, primary_end])
+                    print("✅ Successfully created video sequence with secondary video")
+                except ImportError:
+                    print("⚠️ Could not concatenate videos, using primary only")
+                    final_clip = primary_video.subclipped(0, min(audio_duration, primary_video.duration))
             else:
                 print("Using primary video only...")
-                final_clip = add_primary_secondary_videos(primary_video, primary_video, audio_duration)
+                # Use primary video for entire duration
+                if primary_video.duration < audio_duration:
+                    # Loop primary video to match audio duration
+                    loops_needed = int(audio_duration / primary_video.duration) + 1
+                    primary_clips = [primary_video] * loops_needed
+                    try:
+                        from moviepy import concatenate_videoclips
+                        looped_primary = concatenate_videoclips(primary_clips)
+                        final_clip = looped_primary.subclipped(0, audio_duration)
+                    except ImportError:
+                        final_clip = primary_video.subclipped(0, min(audio_duration, primary_video.duration))
+                else:
+                    final_clip = primary_video.subclipped(0, audio_duration)
             
-            # Step 3: Add audio
-            print("Adding audio...")
-            final_clip = final_clip.with_audio(audio_clip)
+            # Step 3: Add audio with BGM
+            print("Adding audio with background music...")
+            print(f"Original audio duration: {audio_clip.duration:.2f} seconds")
+            mixed_audio = self.add_bgm_to_audio(audio_clip)
+            print(f"Mixed audio duration: {mixed_audio.duration:.2f} seconds")
+            final_clip = final_clip.with_audio(mixed_audio)
             
             # Step 4: Add heading if provided
             if self.heading_text.strip():
@@ -455,8 +601,15 @@ class UltimateShortEditor:
             
             print(f"Exporting video to: {output_path}")
             
-            # Use the same export method as the working video_processor.py
-            final_clip.write_videofile(output_path, codec="libx264", audio_codec="aac")
+            # Export in 1080p with high quality settings (expand to fill instead of padding)
+            final_clip.write_videofile(
+                output_path, 
+                codec="libx264", 
+                audio_codec="aac",
+                fps=30,
+                preset="medium",
+                ffmpeg_params=["-crf", "18", "-vf", "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920"]
+            )
             
             print("Video generation completed!")
             return output_path, f"✅ Video successfully created: {output_filename}\n✅ Auto-captions included: {len(self.auto_captions['captions']) if self.auto_captions else 0} captions"
