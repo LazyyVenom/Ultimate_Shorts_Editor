@@ -158,7 +158,7 @@ class UltimateShortEditor:
         self.processed_audio = None
         self.auto_captions = None
         
-    def add_bgm_to_audio(self, main_audio_clip, bgm_path=None, bgm_volume=0.15):
+    def add_bgm_to_audio(self, main_audio_clip, bgm_path=None, bgm_volume=0.5):
         """Add background music to the main audio clip"""
         if bgm_path is None:
             # Use absolute path to ensure BGM file is found
