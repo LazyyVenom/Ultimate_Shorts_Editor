@@ -162,7 +162,7 @@ class UltimateShortEditor:
         """Add background music to the main audio clip"""
         if bgm_path is None:
             # Use absolute path to ensure BGM file is found
-            bgm_path = os.path.join(os.path.dirname(__file__), "testing_stuff", "that-s-the-one-ryan-mccaffrey-go-by-ocean_qpn2Lcne.wav")
+            bgm_path = os.path.join(os.path.dirname(__file__), "testing_stuff", "bg.mp3")
         
         try:
             print(f"Looking for BGM file at: {bgm_path}")
@@ -482,18 +482,43 @@ class UltimateShortEditor:
                     except ImportError:
                         secondary_segment = secondary_video.subclipped(0, min(secondary_duration, secondary_video.duration))
                 
-                # Primary end segment
-                primary_end = primary_video.subclipped(0, min(primary_end_duration, primary_video.duration))
-                if primary_end.duration < primary_end_duration:
-                    # Loop primary if needed
-                    loops_needed = int(primary_end_duration / primary_video.duration) + 1
-                    primary_clips = [primary_video] * loops_needed
-                    try:
-                        from moviepy import concatenate_videoclips
-                        looped_primary = concatenate_videoclips(primary_clips)
-                        primary_end = looped_primary.subclipped(0, primary_end_duration)
-                    except ImportError:
-                        primary_end = primary_video.subclipped(0, min(primary_end_duration, primary_video.duration))
+                # Primary end segment - continue from where it left off (after 6 seconds)
+                primary_start_offset = primary_start_duration  # Start from 6 seconds
+                available_primary_remaining = max(0, primary_video.duration - primary_start_offset)
+                
+                if available_primary_remaining >= primary_end_duration:
+                    # Enough primary video left to cover the end duration
+                    primary_end = primary_video.subclipped(primary_start_offset, primary_start_offset + primary_end_duration)
+                else:
+                    # Need to loop primary video for the end segment
+                    if available_primary_remaining > 0:
+                        # Use remaining part first
+                        primary_remaining = primary_video.subclipped(primary_start_offset, primary_video.duration)
+                        still_needed = primary_end_duration - available_primary_remaining
+                        
+                        # Calculate how many full loops needed for the remaining time
+                        if still_needed > 0:
+                            loops_needed = int(still_needed / primary_video.duration) + 1
+                            primary_clips = [primary_video] * loops_needed
+                            try:
+                                from moviepy import concatenate_videoclips
+                                looped_primary = concatenate_videoclips(primary_clips)
+                                additional_clip = looped_primary.subclipped(0, still_needed)
+                                primary_end = concatenate_videoclips([primary_remaining, additional_clip])
+                            except ImportError:
+                                primary_end = primary_remaining
+                        else:
+                            primary_end = primary_remaining
+                    else:
+                        # Primary video is too short, loop from beginning
+                        loops_needed = int(primary_end_duration / primary_video.duration) + 1
+                        primary_clips = [primary_video] * loops_needed
+                        try:
+                            from moviepy import concatenate_videoclips
+                            looped_primary = concatenate_videoclips(primary_clips)
+                            primary_end = looped_primary.subclipped(0, primary_end_duration)
+                        except ImportError:
+                            primary_end = primary_video.subclipped(0, min(primary_end_duration, primary_video.duration))
                 
                 # Concatenate all segments
                 try:
